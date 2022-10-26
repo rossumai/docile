@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "docile"
+version = "0.1.0"
+description = "Tools to work with the DocILE dataset and benchmark"
+authors = [
+    "Stepan Simsa <stepan.simsa@rossum.ai>",
+    "Matyas Skalicky <matyas.skalicky@rossum.ai>",
+    "Milan Sulc <milan.sulc@rossum.ai>"
+]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^2.20.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+# NOTE: you have to use single-quoted strings in TOML for regular expressions.
+# It's the equivalent of r-strings in Python.  Multiline strings are treated as
+# verbose regular expressions by Black.  Use [ ] to denote a significant space
+# character.
+line-length = 99
+target-version = ["py39"]
+include = '\.py$'
+exclude = '/(\.git|\.mypy_cache|__pycache__|\.pytest_cache|data|docs|)/'
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 99
+ensure_newline_before_comments = true
+
+[tool.pydocstyle]
+convention = "numpy"
+# D202 - not compatible with black
+add_ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107", "D202"]
+match_dir = '^(?!\.).*\.py'
+
+[tool.mypy]
+pretty = true
+show_error_codes = true
+disallow_untyped_defs = true
+warn_return_any = true
+namespace_packages = true
+ignore_missing_imports = true

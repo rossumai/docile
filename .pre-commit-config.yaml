@@ -1,0 +1,87 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-ast
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: check-json
+        # exclude: data/  # if the checks would be too slow, maybe also add to checks below
+      - id: check-toml
+      - id: check-yaml
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: trailing-whitespace
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 5.0.4
+    hooks:
+      - id: flake8
+        args: [--config, .flake8, --benchmark]
+        additional_dependencies: [
+          flake8-bugbear,
+          flake8-logging-format,
+          flake8-absolute-import,
+          flake8-breakpoint,
+          flake8-colors,
+          flake8-comprehensions,
+          flake8-docstrings,
+          flake8-eradicate,
+          flake8-fixme,
+          flake8-plugin-utils,
+          flake8-print,
+          flake8-polyfill,
+          flake8-todo,
+          flake8-unused-arguments,
+          flake8-use-fstring
+        ]
+  - repo: https://github.com/PyCQA/pydocstyle
+    rev: 6.1.1
+    hooks:
+      - id: pydocstyle
+        additional_dependencies: [
+          "pydocstyle[toml]"
+        ]
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.2.2
+    hooks:
+      - id: codespell
+  - repo: https://github.com/timothycrosley/isort
+    rev: 5.10.1
+    hooks:
+      - id: isort
+        args: [--settings-path=pyproject.toml, --filter-files]
+  - repo: https://github.com/python/black
+    rev: 22.10.0
+    hooks:
+      - id: black
+        # Configuration needs to be explicit because of https://github.com/psf/black/issues/2863
+        args: [--config, pyproject.toml]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.982
+    hooks:
+      - id: mypy
+        name: mypy
+        additional_dependencies: [
+          arrow,
+          alembic,
+          "boto3-stubs[essential]",
+          importlib_resources,
+          more_itertools,
+          numpy,
+          pandas-stubs,
+          pytest-mock,
+          pytest-stub,
+          sqlalchemy-stubs,
+          types-dataclasses,
+          types-Pillow,
+          types-psycopg2,
+          types-PyYAML,
+          types-setuptools,
+          types-tabulate
+        ]
+        args: []
+        language: python
+        types: [python]
