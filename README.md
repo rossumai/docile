@@ -1,6 +1,17 @@
 # DocILE
 DocILE: Document Information Localization and Extraction Benchmark
 
+# Installation
+You need to install some dependencies for PDF handling:
+
+```bash
+# Ubuntu
+apt-get install poppler-utils -y
+
+# Mac
+brew install poppler
+```
+
 # Development instructions
 We use https://python-poetry.org/docs/ for dependency management. Follow the official instructions
 for installation, then run `poetry install` to install the dependencies into virtual environment
