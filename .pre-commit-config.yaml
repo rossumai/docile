@@ -41,9 +41,6 @@ repos:
     rev: 6.1.1
     hooks:
       - id: pydocstyle
-        additional_dependencies: [
-          "pydocstyle[toml]"
-        ]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.2
     hooks:
@@ -65,22 +62,15 @@ repos:
       - id: mypy
         name: mypy
         additional_dependencies: [
-          arrow,
-          alembic,
-          "boto3-stubs[essential]",
           importlib_resources,
           more_itertools,
           numpy,
           pandas-stubs,
           pytest-mock,
           pytest-stub,
-          sqlalchemy-stubs,
           types-dataclasses,
           types-Pillow,
-          types-psycopg2,
-          types-PyYAML,
-          types-setuptools,
-          types-tabulate
+          types-setuptools
         ]
         args: []
         language: python
