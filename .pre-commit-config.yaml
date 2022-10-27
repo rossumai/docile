@@ -41,6 +41,9 @@ repos:
     rev: 6.1.1
     hooks:
       - id: pydocstyle
+        additional_dependencies: [
+          "pydocstyle[toml]"
+        ]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.2
     hooks:

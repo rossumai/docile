@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 from pdf2image import convert_from_path
-from PIL.Image import Image
+from PIL import Image, ImageDraw
 
 from docile.dataset.dataset_store import DatasetStore
 
@@ -19,17 +19,27 @@ class Document:
         self.annotations = DatasetStore(dataset_path).load_annotations(docid)
         self.page_count: int = self.annotations["metadata"]["page_count"]
 
-        self._cache_page_images: Dict[MaxOptionalSize, List[Image]] = {}
+        self._cache_page_images: Dict[MaxOptionalSize, List[Image.Image]] = {}
 
     def page_image_with_fields(
         self, page: int, size: MaxOptionalSize = (None, None), cache: bool = True
-    ) -> Image:
-        # NOTE(simsa-st): Only header fields are displayed
-        return self.page_image(page=page, size=size, cache=cache)
+    ) -> Image.Image:
+        # NOTE(simsa-st): Only KILE fields are displayed as of now
+        page_image = self.page_image(page=page, size=size, cache=cache)
+        draw_img = page_image.copy()
+        draw = ImageDraw.Draw(draw_img)
+
+        for field in self.annotations["field_extractions"]:
+            if field["page"] != page:
+                continue
+            x1, y1, x2, y2 = field["bbox"]
+            w, h = page_image.size
+            draw.rectangle((x1 * w, y1 * h, x2 * w, y2 * h), outline="green")
+        return draw_img
 
     def page_image(
         self, page: int, size: MaxOptionalSize = (None, None), cache: bool = True
-    ) -> Image:
+    ) -> Image.Image:
         """
         Image from a single page of the document.
 
@@ -51,11 +61,13 @@ class Document:
             cache=cache,
         )[page]
 
-    def page_images(self, size: MaxOptionalSize = (None, None), cache: bool = True) -> List[Image]:
+    def page_images(
+        self, size: MaxOptionalSize = (None, None), cache: bool = True
+    ) -> List[Image.Image]:
         """Export images of individual pages."""
         if size in self._cache_page_images:
             return self._cache_page_images[size]
-        images: List[Image] = convert_from_path(
+        images: List[Image.Image] = convert_from_path(
             DatasetStore(self.dataset_path).pdf_path(self.docid),
             size=size,
         )
