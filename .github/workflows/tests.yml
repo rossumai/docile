@@ -1,0 +1,57 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Pre-Commit
+        uses: pre-commit/action@v3.0.0
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+
+    - name: Cache Poetry Install
+      uses: actions/cache@v2
+      with:
+        path: ~/.local
+        key: poetry-1.2.2
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: 1.2.2
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Cache Project Dependencies
+      uses: actions/cache@v2
+      id: cache-deps
+      with:
+        path: .venv
+        key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install Project Dependencies
+      run: poetry install --no-interaction --no-root
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+
+    - name: Install Project
+      run: poetry install --no-interaction --with test
+
+    - name: Pytest
+      run: poetry run pytest

@@ -4,18 +4,35 @@ DocILE: Document Information Localization and Extraction Benchmark
 # Installation
 You need to install some dependencies for PDF handling:
 
+- Ubuntu
 ```bash
-# Ubuntu
 apt-get install poppler-utils -y
-
-# Mac
+```
+- Mac OS X:
+```bash
 brew install poppler
 ```
 
-# Development instructions
-We use https://python-poetry.org/docs/ for dependency management. Follow the official instructions
-for installation, then run `poetry install` to install the dependencies into virtual environment
-and `poetry shell` to spawn a new shell with this virtual environment activated.
+To install the DocTR with, follow the tutorial at:
 
-You will also need https://pre-commit.com/ for pre-commit checks. If you have done the steps above,
-it is already installed in your virtual environment and you only need to call `pre-commit install`.
+- Mac OS X:
+```bash
+brew install cairo pango gdk-pixbuf libffi
+
+pip install "python-doctr[tf]"
+```
+
+# Development instructions
+We use https://python-poetry.org/docs/ for dependency management. Follow the official instructions for to install Poetry. To install the dependencies and activate the virtual environment use:
+
+```bash
+poetry install
+```
+
+Note that you can use `poetry shell` to spawn a new shell with this virtual environment activated.
+
+You will also need https://pre-commit.com/ for pre-commit checks. If you have done the steps above, it is already installed in your virtual environment. To activate the pre-commit, use:
+
+```bash
+pre-commit install
+```
