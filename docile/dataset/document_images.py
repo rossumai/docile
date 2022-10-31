@@ -4,12 +4,12 @@ from typing import List
 from pdf2image import convert_from_path
 from PIL import Image
 
-from docile.dataset.cached import Cached
+from docile.dataset.cached_object import CachedObject
 from docile.dataset.paths import DataPaths
 from docile.dataset.types import OptionalImageSize
 
 
-class DocumentImages(Cached[List[Image.Image]]):
+class DocumentImages(CachedObject[List[Image.Image]]):
     def __init__(
         self, path: Path, pdf_path: Path, page_count: int, size: OptionalImageSize = (None, None)
     ):
