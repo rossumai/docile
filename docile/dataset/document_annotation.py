@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from docile.dataset.cached_object import CachedObject
+from docile.dataset.field import Field
 
 
 class DocumentAnnotation(CachedObject[Dict]):
@@ -17,5 +18,5 @@ class DocumentAnnotation(CachedObject[Dict]):
         return self.content["metadata"]["page_count"]
 
     @property
-    def fields(self) -> List[Dict]:
-        return self.content["field_extractions"]
+    def fields(self) -> List[Field]:
+        return [Field.from_annotation(a) for a in self.content["field_extractions"]]

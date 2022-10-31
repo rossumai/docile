@@ -30,6 +30,13 @@ ignore =
     E501,
     # G004 Logging statements should not use f"..." for their first argument
     G004,
+    # C901 Function is too complex
+    C901,
+    # T100 Fixme found
+    T100,
+    # T000 Todo note found
+    T000
+
 max-complexity = 10
 max-line-length = 99
 enable-extensions = G

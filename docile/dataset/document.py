@@ -61,9 +61,9 @@ class Document:
         draw = ImageDraw.Draw(draw_img)
 
         for field in self.annotation.fields:
-            if field["page"] != page:
+            if field.page != page:
                 continue
             w, h = draw_img.size
-            x1, y1, x2, y2 = field["bbox"]
+            x1, y1, x2, y2 = field.bbox
             draw.rectangle((x1 * w, y1 * h, x2 * w, y2 * h), outline="green")
         return draw_img
