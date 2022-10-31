@@ -3,9 +3,10 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from docile.dataset.document_annotation import DocumentAnnotation
-from docile.dataset.document_images import DocumentImages, MaxOptionalSize
+from docile.dataset.document_images import DocumentImages
 from docile.dataset.document_ocr import DocumentOCR
 from docile.dataset.paths import DataPaths
+from docile.dataset.types import OptionalImageSize
 
 
 class Document:
@@ -26,7 +27,7 @@ class Document:
 
         self.page_count = self.annotation.page_count
 
-    def page_image(self, page: int, image_size: MaxOptionalSize = (None, None)) -> Image.Image:
+    def page_image(self, page: int, image_size: OptionalImageSize = (None, None)) -> Image.Image:
         """
         Get image of the requested page.
 
@@ -39,9 +40,8 @@ class Document:
             this parameter.
         """
         if image_size not in self.images:
-            size_tag = self._size_tag(image_size)
             self.images[image_size] = DocumentImages(
-                path=self.dataset_paths.cache_images_path(self.docid, size_tag),
+                path=self.dataset_paths.cache_images_path(self.docid, image_size),
                 pdf_path=self.dataset_paths.pdf_path(self.docid),
                 page_count=self.page_count,
                 size=image_size,
@@ -50,7 +50,7 @@ class Document:
         return self.images[image_size].content[page]
 
     def page_image_with_fields(
-        self, page: int, image_size: MaxOptionalSize = (None, None)
+        self, page: int, image_size: OptionalImageSize = (None, None)
     ) -> Image.Image:
         """Return page image with bboxes representing fields."""
 
@@ -67,12 +67,3 @@ class Document:
             x1, y1, x2, y2 = field["bbox"]
             draw.rectangle((x1 * w, y1 * h, x2 * w, y2 * h), outline="green")
         return draw_img
-
-    @staticmethod
-    def _size_tag(size: MaxOptionalSize) -> str:
-        """Convert size param to string. This string is used as part of the cache path for images."""
-        if size == (None, None):
-            return ""
-        if isinstance(size, int):
-            return str(size)
-        return f"{size[0]}x{size[1]}"

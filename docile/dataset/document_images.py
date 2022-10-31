@@ -1,18 +1,17 @@
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List
 
 from pdf2image import convert_from_path
 from PIL import Image
 
 from docile.dataset.cached import Cached
 from docile.dataset.paths import DataPaths
-
-MaxOptionalSize = Union[int, Tuple[Optional[int], Optional[int]]]
+from docile.dataset.types import OptionalImageSize
 
 
 class DocumentImages(Cached[List[Image.Image]]):
     def __init__(
-        self, path: Path, pdf_path: Path, page_count: int, size: MaxOptionalSize = (None, None)
+        self, path: Path, pdf_path: Path, page_count: int, size: OptionalImageSize = (None, None)
     ):
         """
         Convert PDF Document to images for its pages.
