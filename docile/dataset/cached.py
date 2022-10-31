@@ -8,40 +8,44 @@ class Cached(Generic[CT]):
     def __init__(
         self,
         path: Path,
-        overwrite: bool = False,
         mem_cache: bool = True,
-        disc_cache: bool = True,
+        disk_cache: bool = True,
     ):
         self._content: Optional[CT] = None
 
         self.path = path
-        self.overwrite = overwrite
         self.mem_cache = mem_cache
-        self.disc_cache = disc_cache
+        self.disk_cache = disk_cache
 
-    def from_file(self, path: Path) -> CT:  # noqa
+    def from_disk(self) -> CT:  # noqa
         raise NotImplementedError
 
-    def to_file(self, content: CT) -> None:  # noqa
+    def to_disk(self, content: CT) -> None:  # noqa
         raise NotImplementedError
 
     def predict(self) -> CT:
         raise NotImplementedError
 
-    @property
-    def content(self) -> CT:
-        """Try to load the content from cache."""
-        if (self.mem_cache and not self.overwrite) and self._content:
-            return self._content
-        if (self.disc_cache and not self.overwrite) and self.path.exists():
-            return self.from_file(self.path)
-
-        # Nothing had been found, we need to predict
+    def predict_and_overwrite(self) -> CT:
         content = self.predict()
 
         if self.mem_cache:
             self._content = content
-        if self.disc_cache:
-            self.to_file(content)
+        if self.disk_cache:
+            self.to_disk(content)
 
         return content
+
+    @property
+    def content(self) -> CT:
+        """Try to load the content from cache."""
+        if self.mem_cache and self._content:
+            return self._content
+        if self.disk_cache and self.path.exists():
+            content = self.from_disk()
+            if self.mem_cache:
+                self._content = content
+            return content
+
+        # Nothing had been found, we need to predict
+        return self.predict_and_overwrite()
