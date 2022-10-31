@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 class DocumentOCR(Cached[Dict]):
     _model = None
 
-    def __init__(self, path: Path, pdf_path: Path, overwrite: bool = False) -> None:
-        super().__init__(path=path, mem_cache=True, disc_cache=True, overwrite=overwrite)
+    def __init__(self, path: Path, pdf_path: Path) -> None:
+        super().__init__(path=path, mem_cache=True, disk_cache=True)
         self.pdf_path = pdf_path
 
     @classmethod
@@ -26,11 +26,10 @@ class DocumentOCR(Cached[Dict]):
         cls._model = ocr_predictor(pretrained=True)
         return cls._model
 
-    @classmethod
-    def from_file(cls, path: Path) -> Dict:
-        return json.loads(path.read_text())
+    def from_disk(self) -> Dict:
+        return json.loads(self.path.read_text())
 
-    def to_file(self, content: Any) -> None:
+    def to_disk(self, content: Any) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(content))
 
