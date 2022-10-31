@@ -13,8 +13,7 @@ apt-get install poppler-utils -y
 brew install poppler
 ```
 
-# Development instructions
-We use https://python-poetry.org/docs/ for dependency management. Follow the official instructions to install Poetry. To install the dependencies, use:
+We use https://python-poetry.org/docs/ for dependency management. Follow the official instructions to install Poetry. You can use `brew install poetry` on Mac OS X. To install the poetry dependencies, use:
 
 ```bash
 poetry install
@@ -22,25 +21,23 @@ poetry install
 
 Note that you can use `poetry shell` to spawn a new shell with this virtual environment activated.
 
-You will also need https://pre-commit.com/ for pre-commit checks. If you have done the steps above, it is already installed in your virtual environment. To activate the pre-commit, use:
+# Development instructions
 
+## Installation
+
+TLDR: If you are on Intel Mac OS X just use the provided makefile to install all dependencies.
 ```bash
-pre-commit install
+make install
 ```
 
+## Running Tests
 
-# Data
-TODO
+```bash
+make test
+```
 
 ## Pre-computed OCR
 
-OCR is provided with the dataset, it is pre-computed using DocTR.
+OCR is provided with the dataset. The prediction was done using the [DocTR](https://github.com/mindee/doctr) library.
 
-If you wish to generate OCR from scratch (e.g., on a different dataset), delete `DATASET\_PATH/ocr` directory and install DocTR by following the tutorial at https://github.com/mindee/doctr#installation, or by using these instructions for Mac:
-
-- Mac OS X:
-```bash
-brew install cairo pango gdk-pixbuf libffi
-
-poetry install "python-doctr[tf]"
-```
+If you wish to generate OCR from scratch (e.g., on a different dataset), delete `DATASET_PATH/ocr` directory and install DocTR by following the [tutorial](https://github.com/mindee/doctr#installation).
