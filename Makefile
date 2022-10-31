@@ -12,4 +12,4 @@ test:
 	poetry run pytest
 
 jupyter:
-	poetry run jupyter notebook
+	poetry run python3 -m jupyter notebook

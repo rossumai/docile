@@ -10,13 +10,14 @@ authors = [
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11"
+python = "~3.10"
 tqdm = "^4.64.1"
 pdf2image = "^1.16.0"
 pillow = "^9.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"
+notebook = "^6.5.2"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.2.0"
