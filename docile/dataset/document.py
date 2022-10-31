@@ -2,11 +2,10 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from docile.document.document_annotation import DocumentAnnotation
-from docile.document.document_ocr import DocumentOCR
-from docile.document.document_pdf import DocumentPDF
-from docile.paths import DataPaths
-from docile.types import MaxOptionalSize
+from docile.dataset.document_annotation import DocumentAnnotation
+from docile.dataset.document_ocr import DocumentOCR
+from docile.dataset.document_pdf import DocumentPDF, MaxOptionalSize
+from docile.dataset.paths import DataPaths
 
 
 class Document:

@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from docile.dataset import Dataset
-from docile.document import Document
+from docile.dataset import Dataset, Document
 
 
 def test_dataset_from_file(sample_dataset_docid: str, sample_dataset_path: Path) -> None:

@@ -1,11 +1,12 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple, Union
 
 from pdf2image import convert_from_path
 from PIL import Image
 
-from docile.document.cached import Cached
-from docile.types import MaxOptionalSize
+from docile.dataset.cached import Cached
+
+MaxOptionalSize = Union[int, Tuple[Optional[int], Optional[int]]]
 
 
 class DocumentPDF(Cached[List[Image.Image]]):
