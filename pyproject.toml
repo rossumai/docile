@@ -10,7 +10,7 @@ authors = [
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.11"
+python = ">=3.10,<3.11"
 tqdm = "^4.64.1"
 pdf2image = "^1.16.0"
 pillow = "^9.2.0"
@@ -35,7 +35,7 @@ build-backend = "poetry.core.masonry.api"
 # verbose regular expressions by Black.  Use [ ] to denote a significant space
 # character.
 line-length = 99
-target-version = ["py39"]
+target-version = ["py310"]
 include = '\.py$'
 exclude = '/(\.git|\.mypy_cache|__pycache__|\.pytest_cache|data|docs|)/'
 
