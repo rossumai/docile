@@ -4,8 +4,8 @@ from typing import Iterable, Union
 
 from tqdm import tqdm
 
-from docile.document import Document
-from docile.paths import DataPaths
+from docile.dataset.document import Document
+from docile.dataset.paths import DataPaths
 
 
 class Dataset:

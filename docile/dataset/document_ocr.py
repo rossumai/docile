@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, List
 
-from docile.document.cached import Cached
+from docile.dataset.cached import Cached
 
 logger = logging.getLogger(__name__)
 

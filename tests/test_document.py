@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from docile.document import Document
+from docile.dataset import Document
 
 
 def test_document_load(sample_dataset_docid: str, sample_dataset_path: Path) -> None:

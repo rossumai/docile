@@ -1,3 +1,3 @@
-from docile.dataset.dataset import Dataset
+from docile.dataset.dataset import Dataset, Document
 
-__all__ = ["Dataset"]
+__all__ = ["Dataset", "Document"]

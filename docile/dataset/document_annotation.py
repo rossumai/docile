@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from docile.document.cached import Cached
+from docile.dataset.cached import Cached
 
 
 class DocumentAnnotation(Cached[Dict]):
