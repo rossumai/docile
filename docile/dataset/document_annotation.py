@@ -2,10 +2,10 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from docile.dataset.cached import Cached
+from docile.dataset.cached_object import CachedObject
 
 
-class DocumentAnnotation(Cached[Dict]):
+class DocumentAnnotation(CachedObject[Dict]):
     def __init__(self, path: Path) -> None:
         super().__init__(path=path, mem_cache=True, disk_cache=True)
 

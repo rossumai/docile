@@ -3,12 +3,12 @@ import logging
 from pathlib import Path
 from typing import Any, Callable, Dict, Generator, List
 
-from docile.dataset.cached import Cached
+from docile.dataset.cached_object import CachedObject
 
 logger = logging.getLogger(__name__)
 
 
-class DocumentOCR(Cached[Dict]):
+class DocumentOCR(CachedObject[Dict]):
     _model = None
 
     def __init__(self, path: Path, pdf_path: Path) -> None:

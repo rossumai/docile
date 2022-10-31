@@ -4,7 +4,7 @@ from typing import Generic, Optional, TypeVar
 CT = TypeVar("CT")
 
 
-class Cached(Generic[CT]):
+class CachedObject(Generic[CT]):
     def __init__(
         self,
         path: Path,
