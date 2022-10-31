@@ -1,5 +1,5 @@
 # DocILE
-DocILE: Document Information Localization and Extraction Benchmark
+[![Tests](https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/rossumai/docile/actions/workflows/tests.yml) DocILE: Document Information Localization and Extraction Benchmark
 
 # Installation
 You need to install some dependencies for PDF handling:
