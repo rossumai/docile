@@ -1,17 +1,16 @@
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 BBOX = Tuple[float, float, float, float]
 
 
+@dataclass(slots=True, frozen=True)  # type: ignore
 class PCC:
     """Wrapper for a position with reference to a parent."""
 
-    __slots__ = ["x", "y", "parent"]
-
-    def __init__(self, x: float, y: float, parent: Optional["Field"] = None):
-        self.x = x
-        self.y = y
-        self.parent = parent
+    x: float
+    y: float
+    parent: "Field"
 
 
 class Field:

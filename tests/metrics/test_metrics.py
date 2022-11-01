@@ -5,20 +5,30 @@ from docile.evaluation.metrics import get_comparisons, pccs_covered, pccs_iou
 
 
 def test_pccs_covered() -> None:
-    sorted_pccs = [PCC(0, 0.5), PCC(0.5, 0.5), PCC(1, 1)]
+    field = Field(bbox=(0, 0, 0, 0))
+    sorted_pccs = [PCC(0, 0.5, field), PCC(0.5, 0.5, field), PCC(1, 1, field)]
     bbox = (0.25, 0.25, 0.75, 0.75)
     assert pccs_covered(sorted_pccs, sorted_pccs, bbox) == {sorted_pccs[1]}
 
 
 def test_pccs_iou() -> None:
-    sorted_pccs = [PCC(0, 0.5), PCC(0.5, 0.5), PCC(1, 1)]
+    field = Field(bbox=(0, 0, 0, 0))
+    sorted_pccs = [PCC(0, 0.5, field), PCC(0.5, 0.5, field), PCC(1, 1, field)]
     gold_bbox = (0.0, 0.0, 1.0, 1.0)
     pred_bbox = (0.25, 0.25, 0.75, 0.75)
     assert math.isclose(pccs_iou(sorted_pccs, sorted_pccs, gold_bbox, pred_bbox), 1 / 3)
 
 
 def test_get_comparisons() -> None:
-    pccs = [PCC(0, 0), PCC(0.1, 0.1), PCC(0.2, 0.1), PCC(0.5, 0.4), PCC(0.5, 0.6), PCC(1, 1)]
+    field = Field(bbox=(0, 0, 0, 0))
+    pccs = [
+        PCC(0, 0, field),
+        PCC(0.1, 0.1, field),
+        PCC(0.2, 0.1, field),
+        PCC(0.5, 0.4, field),
+        PCC(0.5, 0.6, field),
+        PCC(1, 1, field),
+    ]
 
     annotation = [
         Field(fieldtype="miss", text="ab", bbox=(0, 0, 0.3, 0.2)),
