@@ -17,14 +17,16 @@ class Field:
     def __init__(
         self,
         bbox: BBOX,
+        score: Optional[float] = None,
         text: Optional[str] = None,
         page: Optional[int] = None,
         fieldtype: Optional[str] = None,
     ) -> None:
         self.bbox = bbox
-        self.fieldtype = fieldtype
-        self.page = page
+        self.score = score
         self.text = text
+        self.page = page
+        self.fieldtype = fieldtype
 
         if text:
             self.pccs = self.calculate_pccs(bbox, text)
