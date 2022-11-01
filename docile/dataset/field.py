@@ -13,23 +13,17 @@ class PCC:
     parent: "Field"
 
 
+@dataclass()
 class Field:
-    def __init__(
-        self,
-        bbox: BBOX,
-        score: Optional[float] = None,
-        text: Optional[str] = None,
-        page: Optional[int] = None,
-        fieldtype: Optional[str] = None,
-    ) -> None:
-        self.bbox = bbox
-        self.score = score
-        self.text = text
-        self.page = page
-        self.fieldtype = fieldtype
+    bbox: BBOX
+    score: Optional[float] = None
+    text: Optional[str] = None
+    page: Optional[int] = None
+    fieldtype: Optional[str] = None
 
-        if text:
-            self.pccs = self.calculate_pccs(bbox, text)
+    def __post_init__(self) -> None:
+        if self.text:
+            self.pccs = self.calculate_pccs(self.bbox, self.text)
         else:
             self.pccs = None  # type: ignore
 
@@ -48,5 +42,5 @@ class Field:
         C = (r - l) / len(text)
         return [PCC(x=l + (i + 1 / 2) * C, y=(t + b) / 2, parent=self) for i in range(len(text))]
 
-    def __repr__(self) -> str:
-        return f"Field(bbox={self.bbox}, fieldtype='{self.fieldtype}', text='{self.text}', page={self.page})"
+    def __hash__(self) -> int:
+        return hash(id(self))
