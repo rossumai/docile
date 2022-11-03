@@ -1,6 +1,6 @@
 import math
 
-from docile.dataset.field import PCC, BBox, Field
+from docile.dataset import PCC, BBox, Field
 from docile.evaluation.pcc_field_matching import get_matches, pccs_covered, pccs_iou
 
 
