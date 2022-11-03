@@ -1,7 +1,7 @@
 import math
 
 from docile.dataset.field import PCC, BBox, Field
-from docile.evaluation.metrics import get_matches, pccs_covered, pccs_iou
+from docile.evaluation.pcc_field_matching import get_matches, pccs_covered, pccs_iou
 
 
 def test_pccs_covered() -> None:
