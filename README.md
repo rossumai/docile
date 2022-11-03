@@ -1,8 +1,18 @@
 # DocILE
 [![Tests](https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/rossumai/docile/actions/workflows/tests.yml) DocILE: Document Information Localization and Extraction Benchmark
 
-# Installation
-You need to install some dependencies for PDF handling:
+# Development instructions
+
+## Installation
+
+The following installation assumes you want to use the pre-computed OCR. If you want to (re)compute the OCR, you need to do additional installation steps described in [Pre-computed OCR](#pre-computed-ocr) section.
+
+TLDR: On Mac OS X you can simply use:
+```bash
+make install
+```
+
+Otherwise you can follow these steps:
 
 - Ubuntu
 ```bash
@@ -16,19 +26,10 @@ brew install poppler
 We use https://python-poetry.org/docs/ for dependency management. Follow the official instructions to install Poetry. You can use `brew install poetry` on Mac OS X. To install the poetry dependencies, use:
 
 ```bash
-poetry install
+poetry install --with test --with dev --without doctr
 ```
 
 Note that you can use `poetry shell` to spawn a new shell with this virtual environment activated.
-
-# Development instructions
-
-## Installation
-
-TLDR: If you are on Intel Mac OS X just use the provided makefile to install all dependencies.
-```bash
-make install
-```
 
 ## Running Tests
 
@@ -44,7 +45,7 @@ Download dataset from [google drive](https://drive.google.com/file/d/1I4sf75dSEg
 
 OCR is provided with the dataset. The prediction was done using the [DocTR](https://github.com/mindee/doctr) library.
 
-If you wish to generate OCR from scratch (e.g., on a different dataset), delete `DATASET_PATH/ocr` directory and install DocTR by following the [tutorial](https://github.com/mindee/doctr#installation).
+If you wish to (re)generate OCR from scratch (e.g., on a different dataset), delete `DATASET_PATH/ocr` directory and install DocTR. On Mac OS X this can be done using `make install-with-ocr` (resp. `make install-with-ocr-m1` on M1 mac) or by following the official [installation instructions](https://github.com/mindee/doctr#installation).
 
 # Example usage
 
