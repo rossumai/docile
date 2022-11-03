@@ -20,3 +20,7 @@ class DocumentAnnotation(CachedObject[Dict]):
     @property
     def fields(self) -> List[Field]:
         return [Field.from_annotation(a) for a in self.content["field_extractions"]]
+
+    @property
+    def li_fields(self) -> List[Field]:
+        return [Field.from_annotation(a) for a in self.content["line_item_extractions"]]

@@ -49,7 +49,7 @@ class DocumentOCR(CachedObject[Dict]):
             for block in ocr_page["blocks"]:
                 for line in block["lines"]:
                     for word in line["words"]:
-                        yield Field.from_ocr(word)
+                        yield Field.from_ocr(word, page)
 
         return list(yield_next_word(page))
 
