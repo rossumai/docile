@@ -1,46 +1,68 @@
-from dataclasses import dataclass
+import dataclasses
 from typing import Dict, List, Optional, Tuple
 
-BBOX = Tuple[float, float, float, float]
+
+@dataclasses.dataclass(frozen=True)
+class BBox:
+    left: float
+    top: float
+    right: float
+    bottom: float
+
+    def to_absolute_coords(self, width: float, height: float) -> "BBox":
+        return BBox(
+            self.left * width,
+            self.top * height,
+            self.right * width,
+            self.bottom * height,
+        )
+
+    def to_tuple(self) -> Tuple[float, float, float, float]:
+        return self.left, self.top, self.right, self.bottom
 
 
-@dataclass(slots=True, frozen=True)  # type: ignore
+@dataclasses.dataclass(slots=True, frozen=True)  # type: ignore
 class PCC:
-    """Wrapper for a position with reference to a parent."""
+    """Wrapper for a position in the document."""
 
     x: float
     y: float
-    parent: "Field"
+    page: int
 
 
-@dataclass()
+@dataclasses.dataclass(frozen=True)
 class Field:
-    bbox: BBOX
+    bbox: BBox
+    page: int
     score: Optional[float] = None
     text: Optional[str] = None
-    page: Optional[int] = None
     fieldtype: Optional[str] = None
+    pccs: List[PCC] = dataclasses.field(init=False)
 
     def __post_init__(self) -> None:
         if self.text:
-            self.pccs = self.calculate_pccs(self.bbox, self.text)
+            pccs = self.calculate_pccs(self.bbox, self.text)
         else:
-            self.pccs = None  # type: ignore
+            pccs = []
+        object.__setattr__(self, "pccs", pccs)
 
     @classmethod
     def from_annotation(cls, word_dict: Dict) -> "Field":
-        return cls(**word_dict)
+        if "line_item_id" in word_dict:
+            word_dict.pop("line_item_id")
+        bbox = BBox(*word_dict.pop("bbox"))
+        return cls(bbox=bbox, **word_dict)
 
     @classmethod
-    def from_ocr(cls, ocr_dict: Dict) -> "Field":
+    def from_ocr(cls, ocr_dict: Dict, page: int) -> "Field":
         lt, rb = ocr_dict["geometry"]
-        return cls(text=ocr_dict["value"], bbox=(lt[0], lt[1], rb[0], rb[1]))
+        return cls(text=ocr_dict["value"], bbox=BBox(lt[0], lt[1], rb[0], rb[1]), page=page)
 
-    def calculate_pccs(self, bbox: BBOX, text: str) -> List[PCC]:
+    def calculate_pccs(self, bbox: BBox, text: str) -> List[PCC]:
         """Calculate Pseudo Character Boxes (PCCs) given bbox and text."""
-        l, t, r, b = bbox
-        C = (r - l) / len(text)
-        return [PCC(x=l + (i + 1 / 2) * C, y=(t + b) / 2, parent=self) for i in range(len(text))]
+        C = (bbox.right - bbox.left) / len(text)
+        Y = (bbox.top + bbox.bottom) / 2
+        return [PCC(x=bbox.left + (i + 1 / 2) * C, y=Y, page=self.page) for i in range(len(text))]
 
     def __hash__(self) -> int:
         return hash(id(self))

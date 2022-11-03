@@ -50,20 +50,22 @@ class Document:
         return self.images[image_size].content[page]
 
     def page_image_with_fields(
-        self, page: int, image_size: OptionalImageSize = (None, None)
+        self, page: int, image_size: OptionalImageSize = (None, None), show_ocr_words: bool = False
     ) -> Image.Image:
         """Return page image with bboxes representing fields."""
 
-        # NOTE(simsa-st): Only KILE fields are displayed as of now
         page_img = self.page_image(page, image_size)
 
         draw_img = page_img.copy()
         draw = ImageDraw.Draw(draw_img)
 
-        for field in self.annotation.fields:
-            if field.page != page:
-                continue
-            w, h = draw_img.size
-            x1, y1, x2, y2 = field.bbox
-            draw.rectangle((x1 * w, y1 * h, x2 * w, y2 * h), outline="green")
+        for fields, color in [
+            (self.annotation.fields, "green"),
+            (self.annotation.li_fields, "blue"),
+        ] + ([(self.ocr.get_all_words(page), "red")] if show_ocr_words else []):
+            for field in fields:
+                if field.page != page:
+                    continue
+                scaled_bbox = field.bbox.to_absolute_coords(draw_img.width, draw_img.height)
+                draw.rectangle(scaled_bbox.to_tuple(), outline=color)
         return draw_img
