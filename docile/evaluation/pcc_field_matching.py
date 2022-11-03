@@ -1,9 +1,9 @@
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Sequence, Set
+from typing import Iterable, List, Sequence, Set
 
-from docile.dataset.field import PCC, BBox, Field
+from docile.dataset import PCC, BBox, Field
 
 # Small value for robust >= on floats.
 EPS = 1e-6
@@ -22,7 +22,9 @@ class FieldMatching:
     misses: Sequence[Field]  # not matched annotations
 
 
-def pccs_covered(sorted_x_pccs: List[PCC], sorted_y_pccs: List[PCC], bbox: BBox) -> Set[PCC]:
+def pccs_covered(
+    sorted_x_pccs: Sequence[PCC], sorted_y_pccs: Sequence[PCC], bbox: BBox
+) -> Set[PCC]:
     """Obtain which PCCs are under the given bbox."""
 
     i_l = bisect_left(sorted_x_pccs, bbox.left, key=lambda p: p.x)  # type: ignore
@@ -37,7 +39,7 @@ def pccs_covered(sorted_x_pccs: List[PCC], sorted_y_pccs: List[PCC], bbox: BBox)
 
 
 def pccs_iou(
-    sorted_x_pccs: List[PCC], sorted_y_pccs: List[PCC], gold_bbox: BBox, pred_bbox: BBox
+    sorted_x_pccs: Sequence[PCC], sorted_y_pccs: Sequence[PCC], gold_bbox: BBox, pred_bbox: BBox
 ) -> float:
     """Calculate IOU over Pseudo Character Boxes."""
     golds = pccs_covered(sorted_x_pccs, sorted_y_pccs, gold_bbox)
@@ -47,7 +49,10 @@ def pccs_iou(
 
 
 def get_matches(
-    predictions: List[Field], annotations: List[Field], pccs: List[PCC], iou_threshold: float = 1
+    predictions: Sequence[Field],
+    annotations: Sequence[Field],
+    pccs: Iterable[PCC],
+    iou_threshold: float = 1,
 ) -> FieldMatching:
     """
     Find matching between predictions and annotations.
