@@ -1,5 +1,5 @@
-# DocILE
-[![Tests](https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/rossumai/docile/actions/workflows/tests.yml) DocILE: Document Information Localization and Extraction Benchmark
+# DocILE: Document Information Localization and Extraction Benchmark
+[![Tests](https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/rossumai/docile/actions/workflows/tests.yml)
 
 # Development instructions
 
