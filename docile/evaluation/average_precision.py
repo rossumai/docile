@@ -10,7 +10,7 @@ def compute_average_precision(
     predictions_score_matched: Sequence[Tuple[float, bool]],
     total_annotations: int,
 ) -> float:
-    recall_precision_pairs = [[0.0, 1.0]]
+    recall_precision_pairs = [[0.0, 1.0]]  # the precision here is not used
     true_positives = 0
     observed_predictions = 0
     sorted_predictions = sorted(predictions_score_matched, key=_sort_by_score)
@@ -28,13 +28,10 @@ def compute_average_precision(
     ):
         rp_pair_prev[1] = max(rp_pair_prev[1], rp_pair[1])
 
-    if recall_precision_pairs[-1][0] < 1:
-        recall_precision_pairs.append([1.0, 0.0])
-
     average_precision = 0.0
     for rp_pair, rp_pair_next in zip(recall_precision_pairs[:-1], recall_precision_pairs[1:]):
         recall_diff = rp_pair_next[0] - rp_pair[0]
-        precision = rp_pair[1]
+        precision = rp_pair_next[1]
         average_precision += recall_diff * precision
 
     return average_precision
