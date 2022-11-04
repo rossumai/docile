@@ -3,6 +3,8 @@ import logging
 from enum import Enum, auto
 from typing import Mapping, Sequence
 
+from tqdm import tqdm
+
 from docile.dataset import Dataset, Field
 from docile.evaluation.average_precision import compute_average_precision
 from docile.evaluation.pcc_field_matching import get_matches
@@ -34,7 +36,7 @@ def evaluate_dataset(
     if metric == Metric.KILE:
         predictions_score_matched = []
         total_annotations = 0
-        for docid, predictions in docid_to_predictions.items():
+        for docid, predictions in tqdm(docid_to_predictions.items()):
             document = dataset[docid]
             annotations = document.annotation.fields
             pccs = itertools.chain(
@@ -44,9 +46,12 @@ def evaluate_dataset(
                 predictions=predictions, annotations=annotations, pccs=pccs
             )
             predictions_score_matched.extend(
-                (match.pred.score, 1) for match in field_matching.matches
+                (match.pred.score if match.pred.score is not None else 1, 1)
+                for match in field_matching.matches
             )
-            predictions_score_matched.extend((pred.score, 0) for pred in field_matching.extra)
+            predictions_score_matched.extend(
+                (pred.score if pred.score is not None else 1, 0) for pred in field_matching.extra
+            )
             total_annotations += len(annotations)
 
         average_precision = compute_average_precision(

@@ -45,6 +45,9 @@ def pccs_iou(
     golds = pccs_covered(sorted_x_pccs, sorted_y_pccs, gold_bbox)
     preds = pccs_covered(sorted_x_pccs, sorted_y_pccs, pred_bbox)
 
+    if len(golds) == len(preds) == 0:
+        return 0
+
     return len(golds.intersection(preds)) / len(golds.union(preds))
 
 
