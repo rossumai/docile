@@ -47,11 +47,11 @@ class Field:
         object.__setattr__(self, "pccs", pccs)
 
     @classmethod
-    def from_annotation(cls, word_dict: Dict) -> "Field":
-        if "line_item_id" in word_dict:
-            word_dict.pop("line_item_id")
-        bbox = BBox(*word_dict.pop("bbox"))
-        return cls(bbox=bbox, **word_dict)
+    def from_annotation(cls, annotation_dict: Dict) -> "Field":
+        if "line_item_id" in annotation_dict:
+            annotation_dict.pop("line_item_id")
+        bbox = BBox(*(annotation_dict.pop("bbox")))
+        return cls(bbox=bbox, **annotation_dict)
 
     @classmethod
     def from_ocr(cls, ocr_dict: Dict, page: int) -> "Field":
