@@ -5,7 +5,7 @@
 
 ## Installation
 
-The following installation assumes you want to use the pre-computed OCR. If you want to (re)compute the OCR, you need to do additional installation steps described in [Pre-computed OCR](#pre-computed-ocr) section.
+The following installation assumes you want to use the pre-computed OCR. If you want to (re)compute the OCR, you need to do additional installation steps described in [Pre-computed OCR](#pre-computed-ocr) section or [Run in docker](#run-in-docker).
 
 TLDR: On Mac OS X you can simply use:
 ```bash
@@ -30,6 +30,20 @@ poetry install --with test --with dev --without doctr
 ```
 
 Note that you can use `poetry shell` to spawn a new shell with this virtual environment activated.
+
+
+## Run in docker
+You can use the provided Dockerfile and docker-compose with docile repo installed, including DocTR
+(see [Pre-computed OCR](#pre-computed-ocr) for more info on the re-computing OCR). Build it with
+`docker-compose build` and start it with `docker-compose up -d`. You can then access jupyterlab at
+`https://127.0.0.1:${JUPYTER_PORT}` (the port is defined in  `.env/`) or login to the container
+with:
+```docker-compose exec --privileged -it docile-jupyter-1 bash```
+
+**Note:** docker needs to be run with `--privileged` flag when running DocTR because otherwise
+operation `pkey_mprotect` (which is called somewhere inside) is not allowed.
+
+If your data is not `data/` do not forget to mount it to the docker container.
 
 ## Running Tests
 

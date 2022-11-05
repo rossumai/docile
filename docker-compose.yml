@@ -1,0 +1,29 @@
+version: '2.4'
+services:
+  jupyter:
+    image: jupyter/base-notebook
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GPU_RUNTIME: nvidia
+    ports:
+      - "${JUPYTER_PORT}:${JUPYTER_PORT}"
+    command: poetry run jupyter lab --ip=0.0.0.0 --port=${JUPYTER_PORT} --allow-root
+    volumes:
+      - "./docile:/app/docile:cached"
+      - "./data:/data:cached"
+      - "./logs:/logs:cached"
+    deploy:
+      resources:
+        # consider reducing these limits
+        limits:
+          cpus: "64"
+          memory: 100GB
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    environment:
+      CUDA_DEVICE_ORDER: PCI_BUS_ID
+      CUDA_VISIBLE_DEVICES: ''
+    privileged: true
