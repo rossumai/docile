@@ -44,6 +44,7 @@ class Field:
     score: Optional[float] = None
     text: Optional[str] = None
     fieldtype: Optional[str] = None
+    line_item_id: Optional[int] = None
     pccs: List[PCC] = dataclasses.field(init=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -56,8 +57,6 @@ class Field:
     @classmethod
     def from_annotation(cls, annotation_dict: Mapping[str, Any]) -> "Field":
         annotation_copy = dict(annotation_dict)
-        if "line_item_id" in annotation_dict:
-            annotation_copy.pop("line_item_id")
         bbox = BBox(*(annotation_copy.pop("bbox")))
         return cls(bbox=bbox, **annotation_copy)
 

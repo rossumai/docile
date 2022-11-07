@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from docile.dataset import Dataset, Field
 from docile.evaluation.average_precision import compute_average_precision
+from docile.evaluation.line_item_matching import get_lir_matches
 from docile.evaluation.pcc_field_matching import FieldMatching, get_matches
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ def evaluate_dataset(
     docid_to_kile_predictions: Mapping[str, Sequence[Field]],
     docid_to_lir_predictions: Mapping[str, Sequence[Field]],
     with_text: bool = False,
+    iou_threshold: float = 1.0,
 ) -> Dict[str, float]:
     """
     Evaluate the dataset on KILE and LIR using the given predictions.
@@ -32,6 +34,9 @@ def evaluate_dataset(
         Mapping from doc ids (in the 'dataset') to LIR predictions.
     with_text
         If True, evaluate (also) by comparing the read-out text.
+    iou_threshold
+        Necessary 'intersection / union' to accept a pair of fields as a match. The official
+        evaluation uses threshold 1.0 but lower thresholds can be used for debugging.
 
     Returns
     -------
@@ -73,28 +78,38 @@ def evaluate_dataset(
     metric_to_total_annotations = {metric: 0 for metric in metric_to_score_matched_pairs.keys()}
 
     for document in tqdm(dataset, desc="Run matching for documents"):
-        pccs = itertools.chain(
-            *(document.ocr.get_all_pccs(page) for page in range(document.page_count))
+        pccs = list(
+            itertools.chain(
+                *(document.ocr.get_all_pccs(page) for page in range(document.page_count))
+            )
         )
 
         kile_annotations = document.annotation.fields
-        kile_predictions = docid_to_kile_predictions[document.docid]
-        li_annotations = document.annotation.li_fields
+        kile_predictions = docid_to_kile_predictions.get(document.docid, [])
+        lir_annotations = document.annotation.li_fields
+        lir_predictions = docid_to_lir_predictions.get(document.docid, [])
 
-        # TODO: pass use_text to matching and compute LIR metric as well # noqa
+        # TODO: pass use_text to matching # noqa
         for use_text in [False, True] if with_text else [False]:
             metric = "kile_with_text" if use_text else "kile"
-            metric_to_score_matched_pairs[metric].extend(
-                _get_score_matched_pairs(
-                    get_matches(
-                        predictions=kile_predictions, annotations=kile_annotations, pccs=pccs
-                    )
-                )
+            kile_matching = get_matches(
+                predictions=kile_predictions,
+                annotations=kile_annotations,
+                pccs=pccs,
+                iou_threshold=iou_threshold,
             )
+            metric_to_score_matched_pairs[metric].extend(_get_score_matched_pairs(kile_matching))
             metric_to_total_annotations[metric] += len(kile_annotations)
+
             metric = "lir_with_text" if use_text else "lir"
-            metric_to_score_matched_pairs[metric].extend([])
-            metric_to_total_annotations[metric] += len(li_annotations)
+            lir_matching, _line_item_matching = get_lir_matches(
+                predictions=lir_predictions,
+                annotations=lir_annotations,
+                pccs=pccs,
+                iou_threshold=iou_threshold,
+            )
+            metric_to_score_matched_pairs[metric].extend(_get_score_matched_pairs(lir_matching))
+            metric_to_total_annotations[metric] += len(lir_annotations)
 
     metric_to_average_precision = {
         metric: compute_average_precision(

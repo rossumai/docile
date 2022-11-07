@@ -74,10 +74,13 @@ for document in dataset_train:
 
 dataset_test = Dataset.from_file("test", DATASET_PATH)
 docid_to_kile_predictions = {}
+docid_to_lir_predictions = {}
 for document in dataset_test:
-    # kile_predictions = ... predict kile_fields
+    # kile_predictions = ... predict KILE fields
+    # lir_predictions = ... predict LIR fields
     docid_to_kile_predictions[document.docid] = kile_predictions
+    docid_to_lir_predictions[document.docid] = lir_predictions
 
-average_precision = evaluate_dataset(dataset_test, docid_to_kile_predictions, Metric.KILE)
-print(f"Test AP={average_precision}")
+eval_dict = evaluate_dataset(dataset_test, docid_to_kile_predictions, docid_to_lir_predictions)
+print(f"Test AP\n{eval_dict}")
 ```
