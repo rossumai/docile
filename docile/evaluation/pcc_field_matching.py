@@ -76,6 +76,10 @@ def get_matches(
         Necessary 'intersection / union' to accept a pair of fields as a match. The official
         evaluation uses threshold 1.0 but lower thresholds can be used for debugging.
     """
+    have_scores = sum(1 for f in predictions if f.score is not None)
+    if have_scores > 0 and have_scores < len(predictions):
+        raise ValueError("Either all or no predictions need to have scores")
+
     page_to_pccs = defaultdict(list)
     for pcc in pccs:
         page_to_pccs[pcc.page].append(pcc)
@@ -99,7 +103,7 @@ def get_matches(
 
     all_fieldtypes = set(key_page_to_annotations.keys()).union(key_to_predictions.keys())
     for fieldtype in all_fieldtypes:
-        for pred in sorted(key_to_predictions[fieldtype], key=lambda pred: -(pred.score or 0)):
+        for pred in sorted(key_to_predictions[fieldtype], key=lambda pred: -(pred.score or 1)):
             for gold_i, gold in enumerate(key_page_to_annotations[fieldtype][pred.page]):
                 iou = pccs_iou(
                     sorted_x_pccs=page_to_sorted_x_pccs[pred.page],
@@ -121,8 +125,4 @@ def get_matches(
         for field in fields
     ]
 
-    return FieldMatching(
-        matches=matched_pairs,
-        extra=extra,
-        misses=misses,
-    )
+    return FieldMatching(matches=matched_pairs, extra=extra, misses=misses)

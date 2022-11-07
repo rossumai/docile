@@ -45,6 +45,15 @@ def evaluate_dataset(
         "lir": docid_to_lir_predictions,
     }
     for metric, docid_to_predictions in metric_to_predictions.items():
+        have_scores = sum(
+            sum(1 for f in fields if f.score is not None)
+            for fields in docid_to_predictions.values()
+        )
+        if have_scores > 0 and have_scores < sum(
+            len(fields) for fields in docid_to_predictions.values()
+        ):
+            raise ValueError("Either all or no predictions need to have scores")
+
         extra = len(set(docid_to_predictions.keys()).difference(dataset.docids))
         missing = len(set(dataset.docids).difference(docid_to_predictions.keys()))
         if extra:
