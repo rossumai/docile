@@ -1,4 +1,4 @@
-import math
+import pytest
 
 from docile.dataset import PCC, BBox, Field
 from docile.evaluation.pcc_field_matching import get_matches, pccs_covered, pccs_iou
@@ -14,7 +14,17 @@ def test_pccs_iou() -> None:
     sorted_pccs = [PCC(0, 0.5, 1), PCC(0.5, 0.5, 1), PCC(1, 1, 1)]
     gold_bbox = BBox(0.0, 0.0, 1.0, 1.0)
     pred_bbox = BBox(0.25, 0.25, 0.75, 0.75)
-    assert math.isclose(pccs_iou(sorted_pccs, sorted_pccs, gold_bbox, pred_bbox), 1 / 3)
+    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox, pred_bbox) == pytest.approx(1 / 3)
+
+
+def test_pccs_iou_empty() -> None:
+    sorted_pccs = [PCC(1, 1, 1)]
+    gold_bbox_empty = BBox(0.25, 0.25, 0.75, 0.75)
+    pred_bbox_empty = BBox(0.0, 0.0, 0.75, 0.75)
+    pred_bbox_nonempty = BBox(0.0, 0.0, 1.25, 1.25)
+
+    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox_empty, pred_bbox_empty) == 0.0
+    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox_empty, pred_bbox_nonempty) == 0.0
 
 
 def test_get_matches() -> None:
@@ -51,6 +61,7 @@ def test_get_matches() -> None:
     )
     assert len(matching.extra) == 4
     assert len(matching.misses) == 3
+
     matching_iou05 = get_matches(
         predictions=predictions, annotations=annotations, pccs=pccs, iou_threshold=0.5
     )

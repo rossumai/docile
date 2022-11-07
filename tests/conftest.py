@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 
+from docile.dataset import Dataset
+
 
 @pytest.fixture
 def sample_dataset_docid() -> str:
@@ -11,3 +13,8 @@ def sample_dataset_docid() -> str:
 @pytest.fixture
 def sample_dataset_path() -> Path:
     return Path("tests/data/sample-dataset")
+
+
+@pytest.fixture
+def sample_dataset(sample_dataset_path: Path) -> Dataset:
+    return Dataset.from_file("dev", sample_dataset_path)
