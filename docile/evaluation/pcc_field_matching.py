@@ -27,12 +27,12 @@ def pccs_covered(
 ) -> Set[PCC]:
     """Obtain which PCCs are under the given bbox."""
 
-    i_l = bisect_left(sorted_x_pccs, bbox.left, key=lambda p: p.x)  # type: ignore
-    i_r = bisect_right(sorted_x_pccs, bbox.right, key=lambda p: p.x)  # type: ignore
+    i_l = bisect_left(sorted_x_pccs, bbox.left, key=lambda p: p.x)
+    i_r = bisect_right(sorted_x_pccs, bbox.right, key=lambda p: p.x)
     x_subset = set(sorted_x_pccs[i_l:i_r])
 
-    i_t = bisect_left(sorted_y_pccs, bbox.top, key=lambda p: p.y)  # type: ignore
-    i_b = bisect_right(sorted_y_pccs, bbox.bottom, key=lambda p: p.y)  # type: ignore
+    i_t = bisect_left(sorted_y_pccs, bbox.top, key=lambda p: p.y)
+    i_b = bisect_right(sorted_y_pccs, bbox.bottom, key=lambda p: p.y)
     y_subset = set(sorted_y_pccs[i_t:i_b])
 
     return x_subset.intersection(y_subset)
@@ -86,25 +86,21 @@ def get_matches(
         page: sorted(page_pccs, key=lambda p: p.y) for page, page_pccs in page_to_pccs.items()
     }
 
-    annotations_by_key_and_page = defaultdict(lambda: defaultdict(list))
+    key_page_to_annotations = defaultdict(lambda: defaultdict(list))
     for a in annotations:
-        annotations_by_key_and_page[a.fieldtype][a.page].append(a)
+        key_page_to_annotations[a.fieldtype][a.page].append(a)
 
-    predictions_by_key = defaultdict(list)
+    key_to_predictions = defaultdict(list)
     for p in predictions:
-        predictions_by_key[p.fieldtype].append(p)
+        key_to_predictions[p.fieldtype].append(p)
 
     matched_pairs: List[MatchedPair] = []
     extra: List[Field] = []
 
-    all_fieldtypes = set(annotations_by_key_and_page.keys()).union(predictions_by_key.keys())
+    all_fieldtypes = set(key_page_to_annotations.keys()).union(key_to_predictions.keys())
     for fieldtype in all_fieldtypes:
-        for pred in sorted(
-            predictions_by_key[fieldtype],
-            key=lambda pred: -pred.score if pred.score is not None else 0,
-        ):
-            matched_pair = None
-            for gold_i, gold in enumerate(annotations_by_key_and_page[fieldtype][pred.page]):
+        for pred in sorted(key_to_predictions[fieldtype], key=lambda pred: -(pred.score or 0)):
+            for gold_i, gold in enumerate(key_page_to_annotations[fieldtype][pred.page]):
                 iou = pccs_iou(
                     sorted_x_pccs=page_to_sorted_x_pccs[pred.page],
                     sorted_y_pccs=page_to_sorted_y_pccs[pred.page],
@@ -112,17 +108,15 @@ def get_matches(
                     pred_bbox=pred.bbox,
                 )
                 if iou > iou_threshold - EPS:
-                    matched_pair = MatchedPair(gold=gold, pred=pred)
-                    annotations_by_key_and_page[fieldtype][pred.page].pop(gold_i)
+                    matched_pairs.append(MatchedPair(gold=gold, pred=pred))
+                    key_page_to_annotations[fieldtype][pred.page].pop(gold_i)
                     break
-            if matched_pair is None:
-                extra.append(pred)
             else:
-                matched_pairs.append(matched_pair)
+                extra.append(pred)
 
     misses = [
         field
-        for page_to_fields in annotations_by_key_and_page.values()
+        for page_to_fields in key_page_to_annotations.values()
         for fields in page_to_fields.values()
         for field in fields
     ]
