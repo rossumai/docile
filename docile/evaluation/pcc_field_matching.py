@@ -42,11 +42,14 @@ def pccs_iou(
     sorted_x_pccs: Sequence[PCC], sorted_y_pccs: Sequence[PCC], gold_bbox: BBox, pred_bbox: BBox
 ) -> float:
     """Calculate IOU over Pseudo Character Boxes."""
+    if not gold_bbox.intersects(pred_bbox):
+        return 0
+
     golds = pccs_covered(sorted_x_pccs, sorted_y_pccs, gold_bbox)
     preds = pccs_covered(sorted_x_pccs, sorted_y_pccs, pred_bbox)
 
     if len(golds) == len(preds) == 0:
-        return 0
+        return 1
 
     return len(golds.intersection(preds)) / len(golds.union(preds))
 
