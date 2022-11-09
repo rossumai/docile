@@ -23,7 +23,7 @@ def test_pccs_iou_empty() -> None:
     pred_bbox_empty = BBox(0.0, 0.0, 0.75, 0.75)
     pred_bbox_nonempty = BBox(0.0, 0.0, 1.25, 1.25)
 
-    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox_empty, pred_bbox_empty) == 0.0
+    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox_empty, pred_bbox_empty) == 1.0
     assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox_empty, pred_bbox_nonempty) == 0.0
 
 
