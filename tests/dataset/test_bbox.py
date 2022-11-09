@@ -1,4 +1,4 @@
-from docile.dataset.field import BBox
+from docile.dataset.bbox import BBox
 
 
 def test_bbox_to_absolute_coords() -> None:

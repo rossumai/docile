@@ -1,5 +1,7 @@
+from docile.dataset.bbox import BBox
 from docile.dataset.dataset import Dataset
 from docile.dataset.document import Document
-from docile.dataset.field import PCC, BBox, Field
+from docile.dataset.field import Field
+from docile.dataset.pcc import PCC, PCCSet
 
-__all__ = ["BBox", "Dataset", "Document", "Field", "PCC"]
+__all__ = ["BBox", "Dataset", "Document", "Field", "PCC", "PCCSet"]

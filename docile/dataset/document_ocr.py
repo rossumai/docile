@@ -1,10 +1,11 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, Generator, List
+from typing import Any, Callable, Dict, Generator, List, Optional
 
 from docile.dataset.cached_object import CachedObject
-from docile.dataset.field import PCC, Field
+from docile.dataset.field import Field
+from docile.dataset.pcc import PCC, calculate_pccs
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,19 @@ class DocumentOCR(CachedObject[Dict]):
 
         return list(yield_next_word(page))
 
-    def get_all_pccs(self, page: int) -> List[PCC]:
-        """Get all Pseudo Character Boxes (PCCs) on given page."""
-        words = self.get_all_words(page)
-        return [pcc for word in words for pcc in word.pccs]
+    def get_all_pccs(self, page: Optional[int] = None) -> List[PCC]:
+        """Get all Pseudo Character Boxes (PCCs) for the whole document or on a given page."""
+        if page is None:
+            pages = list(range(len(self.content["pages"])))
+        else:
+            pages = [page]
+
+        pccs = []
+        for page in pages:
+            for word in self.get_all_words(page):
+                if word.text is None or word.text == "":
+                    logger.debug(f"Cannot generate PCCs for OCR word with empty text: {word}")
+                    continue
+                pccs.extend(calculate_pccs(word.bbox, word.text, page))
+
+        return pccs

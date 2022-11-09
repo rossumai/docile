@@ -1,6 +1,6 @@
 import pytest
 
-from docile.dataset import PCC, BBox, Field
+from docile.dataset import PCC, BBox, Field, PCCSet
 from docile.evaluation.line_item_matching import (
     _get_covering_bbox,
     _get_line_item_id,
@@ -40,15 +40,17 @@ def test_get_covering_bbox() -> None:
 
 
 def test_get_lir_matches() -> None:
-    pccs = [
-        PCC(0, 0, 0),
-        PCC(0.1, 0.1, 0),
-        PCC(0.2, 0.1, 0),
-        PCC(0.5, 0.4, 0),
-        PCC(0.5, 0.6, 0),
-        PCC(1, 1, 0),
-        PCC(0.1, 0.1, 1),
-    ]
+    pcc_set = PCCSet(
+        [
+            PCC(0, 0, 0),
+            PCC(0.1, 0.1, 0),
+            PCC(0.2, 0.1, 0),
+            PCC(0.5, 0.4, 0),
+            PCC(0.5, 0.6, 0),
+            PCC(1, 1, 0),
+            PCC(0.1, 0.1, 1),
+        ]
+    )
 
     annotations = [
         Field(fieldtype="a", text="ab", line_item_id=0, bbox=BBox(0.4, 0.4, 0.7, 0.7), page=0),
@@ -74,7 +76,9 @@ def test_get_lir_matches() -> None:
     # While greedy matching might assign pred line item (LI) 1 to gold LI 2, maximum matching
     # will assign it to gold LI 1 (so that pred LI 2 can be assigned to gold LI 2).
 
-    field_matching, li_matching = get_lir_matches(predictions, annotations, pccs, iou_threshold=1)
+    field_matching, li_matching = get_lir_matches(
+        predictions=predictions, annotations=annotations, pcc_set=pcc_set, iou_threshold=1
+    )
     assert li_matching == {4: 0, 1: 1, 2: 2}
     assert set(field_matching.matches) == {
         MatchedPair(pred=predictions[0], gold=annotations[0]),
