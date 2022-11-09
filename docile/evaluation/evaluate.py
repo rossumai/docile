@@ -4,7 +4,7 @@ from typing import Dict, Iterable, Mapping, Sequence, Tuple
 
 from tqdm import tqdm
 
-from docile.dataset import Dataset, Field
+from docile.dataset import Dataset, Field, PCCSet
 from docile.evaluation.average_precision import compute_average_precision
 from docile.evaluation.line_item_matching import get_lir_matches
 from docile.evaluation.pcc_field_matching import FieldMatching, get_matches
@@ -78,11 +78,7 @@ def evaluate_dataset(
     metric_to_total_annotations = {metric: 0 for metric in metric_to_score_matched_pairs.keys()}
 
     for document in tqdm(dataset, desc="Run matching for documents"):
-        pccs = list(
-            itertools.chain(
-                *(document.ocr.get_all_pccs(page) for page in range(document.page_count))
-            )
-        )
+        pcc_set = PCCSet(document.ocr.get_all_pccs())
 
         kile_annotations = document.annotation.fields
         kile_predictions = docid_to_kile_predictions.get(document.docid, [])
@@ -95,7 +91,7 @@ def evaluate_dataset(
             kile_matching = get_matches(
                 predictions=kile_predictions,
                 annotations=kile_annotations,
-                pccs=pccs,
+                pcc_set=pcc_set,
                 iou_threshold=iou_threshold,
             )
             metric_to_score_matched_pairs[metric].extend(_get_score_matched_pairs(kile_matching))
@@ -105,7 +101,7 @@ def evaluate_dataset(
             lir_matching, _line_item_matching = get_lir_matches(
                 predictions=lir_predictions,
                 annotations=lir_annotations,
-                pccs=pccs,
+                pcc_set=pcc_set,
                 iou_threshold=iou_threshold,
             )
             metric_to_score_matched_pairs[metric].extend(_get_score_matched_pairs(lir_matching))

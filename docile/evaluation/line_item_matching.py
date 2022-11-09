@@ -3,7 +3,7 @@ from typing import Dict, Iterable, List, Sequence, Tuple
 
 import networkx
 
-from docile.dataset import PCC, BBox, Field
+from docile.dataset import BBox, Field, PCCSet
 from docile.evaluation.pcc_field_matching import FieldMatching, MatchedPair, get_matches
 
 
@@ -35,7 +35,7 @@ def _get_covering_bbox(bboxes: Iterable[BBox]) -> BBox:
 def get_lir_matches(
     predictions: Sequence[Field],
     annotations: Sequence[Field],
-    pccs: Sequence[PCC],
+    pcc_set: PCCSet,
     iou_threshold: float = 1,
 ) -> Tuple[FieldMatching, Dict[int, int]]:
     """
@@ -89,7 +89,10 @@ def get_lir_matches(
                 field_matching = FieldMatching(matches=[], extra=preds, misses=golds)
             else:
                 field_matching = get_matches(
-                    predictions=preds, annotations=golds, pccs=pccs, iou_threshold=iou_threshold
+                    predictions=preds,
+                    annotations=golds,
+                    pcc_set=pcc_set,
+                    iou_threshold=iou_threshold,
                 )
 
             G.add_edge(

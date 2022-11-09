@@ -1,9 +1,8 @@
-from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Iterable, List, Sequence, Set
+from typing import List, Sequence
 
-from docile.dataset import PCC, BBox, Field
+from docile.dataset import BBox, Field, PCCSet
 
 # Small value for robust >= on floats.
 EPS = 1e-6
@@ -22,31 +21,13 @@ class FieldMatching:
     misses: Sequence[Field]  # not matched annotations
 
 
-def pccs_covered(
-    sorted_x_pccs: Sequence[PCC], sorted_y_pccs: Sequence[PCC], bbox: BBox
-) -> Set[PCC]:
-    """Obtain which PCCs are under the given bbox."""
-
-    i_l = bisect_left(sorted_x_pccs, bbox.left, key=lambda p: p.x)
-    i_r = bisect_right(sorted_x_pccs, bbox.right, key=lambda p: p.x)
-    x_subset = set(sorted_x_pccs[i_l:i_r])
-
-    i_t = bisect_left(sorted_y_pccs, bbox.top, key=lambda p: p.y)
-    i_b = bisect_right(sorted_y_pccs, bbox.bottom, key=lambda p: p.y)
-    y_subset = set(sorted_y_pccs[i_t:i_b])
-
-    return x_subset.intersection(y_subset)
-
-
-def pccs_iou(
-    sorted_x_pccs: Sequence[PCC], sorted_y_pccs: Sequence[PCC], gold_bbox: BBox, pred_bbox: BBox
-) -> float:
+def pccs_iou(pcc_set: PCCSet, gold_bbox: BBox, pred_bbox: BBox, page: int) -> float:
     """Calculate IOU over Pseudo Character Boxes."""
     if not gold_bbox.intersects(pred_bbox):
         return 0
 
-    golds = pccs_covered(sorted_x_pccs, sorted_y_pccs, gold_bbox)
-    preds = pccs_covered(sorted_x_pccs, sorted_y_pccs, pred_bbox)
+    golds = pcc_set.get_covered_pccs(gold_bbox, page)
+    preds = pcc_set.get_covered_pccs(pred_bbox, page)
 
     if len(golds) == len(preds) == 0:
         return 1
@@ -57,7 +38,7 @@ def pccs_iou(
 def get_matches(
     predictions: Sequence[Field],
     annotations: Sequence[Field],
-    pccs: Iterable[PCC],
+    pcc_set: PCCSet,
     iou_threshold: float = 1,
 ) -> FieldMatching:
     """
@@ -72,7 +53,7 @@ def get_matches(
         several predictions).
     annotations
         KILE or LI gold fields for the same page/document.
-    pccs
+    pcc_set
         Pseudo-Character-Centers (PCCs) covering all pages that have any of the
         predictions/annotations fields.
     iou_threshold
@@ -82,16 +63,6 @@ def get_matches(
     have_scores = sum(1 for f in predictions if f.score is not None)
     if have_scores > 0 and have_scores < len(predictions):
         raise ValueError("Either all or no predictions need to have scores")
-
-    page_to_pccs = defaultdict(list)
-    for pcc in pccs:
-        page_to_pccs[pcc.page].append(pcc)
-    page_to_sorted_x_pccs = {
-        page: sorted(page_pccs, key=lambda p: p.x) for page, page_pccs in page_to_pccs.items()
-    }
-    page_to_sorted_y_pccs = {
-        page: sorted(page_pccs, key=lambda p: p.y) for page, page_pccs in page_to_pccs.items()
-    }
 
     key_page_to_annotations = defaultdict(lambda: defaultdict(list))
     for a in annotations:
@@ -109,10 +80,10 @@ def get_matches(
         for pred in sorted(key_to_predictions[fieldtype], key=lambda pred: -(pred.score or 1)):
             for gold_i, gold in enumerate(key_page_to_annotations[fieldtype][pred.page]):
                 iou = pccs_iou(
-                    sorted_x_pccs=page_to_sorted_x_pccs[pred.page],
-                    sorted_y_pccs=page_to_sorted_y_pccs[pred.page],
+                    pcc_set=pcc_set,
                     gold_bbox=gold.bbox,
                     pred_bbox=pred.bbox,
+                    page=pred.page,
                 )
                 if iou > iou_threshold - EPS:
                     matched_pairs.append(MatchedPair(gold=gold, pred=pred))

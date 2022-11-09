@@ -1,42 +1,38 @@
 import pytest
 
-from docile.dataset import PCC, BBox, Field
-from docile.evaluation.pcc_field_matching import get_matches, pccs_covered, pccs_iou
-
-
-def test_pccs_covered() -> None:
-    sorted_pccs = [PCC(0, 0.5, 0), PCC(0.5, 0.5, 0), PCC(1, 1, 0)]
-    bbox = BBox(0.25, 0.25, 0.75, 0.75)
-    assert pccs_covered(sorted_pccs, sorted_pccs, bbox) == {sorted_pccs[1]}
+from docile.dataset import PCC, BBox, Field, PCCSet
+from docile.evaluation.pcc_field_matching import get_matches, pccs_iou
 
 
 def test_pccs_iou() -> None:
-    sorted_pccs = [PCC(0, 0.5, 1), PCC(0.5, 0.5, 1), PCC(1, 1, 1)]
+    pcc_set = PCCSet([PCC(0, 0.5, 1), PCC(0.5, 0.5, 1), PCC(1, 1, 1)])
     gold_bbox = BBox(0.0, 0.0, 1.0, 1.0)
     pred_bbox = BBox(0.25, 0.25, 0.75, 0.75)
-    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox, pred_bbox) == pytest.approx(1 / 3)
+    assert pccs_iou(pcc_set, gold_bbox, pred_bbox, page=1) == pytest.approx(1 / 3)
 
 
 def test_pccs_iou_empty() -> None:
-    sorted_pccs = [PCC(1, 1, 1)]
+    pcc_set = PCCSet([PCC(1, 1, 1)])
     gold_bbox_empty = BBox(0.25, 0.25, 0.75, 0.75)
     pred_bbox_empty = BBox(0.0, 0.0, 0.75, 0.75)
     pred_bbox_nonempty = BBox(0.0, 0.0, 1.25, 1.25)
 
-    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox_empty, pred_bbox_empty) == 1.0
-    assert pccs_iou(sorted_pccs, sorted_pccs, gold_bbox_empty, pred_bbox_nonempty) == 0.0
+    assert pccs_iou(pcc_set, gold_bbox_empty, pred_bbox_empty, page=1) == 1.0
+    assert pccs_iou(pcc_set, gold_bbox_empty, pred_bbox_nonempty, page=1) == 0.0
 
 
 def test_get_matches() -> None:
-    pccs = [
-        PCC(0, 0, 0),
-        PCC(0.1, 0.1, 0),
-        PCC(0.2, 0.1, 0),
-        PCC(0.5, 0.4, 0),
-        PCC(0.5, 0.6, 0),
-        PCC(1, 1, 0),
-        PCC(0.5, 0.5, 1),
-    ]
+    pcc_set = PCCSet(
+        [
+            PCC(0, 0, 0),
+            PCC(0.1, 0.1, 0),
+            PCC(0.2, 0.1, 0),
+            PCC(0.5, 0.4, 0),
+            PCC(0.5, 0.6, 0),
+            PCC(1, 1, 0),
+            PCC(0.5, 0.5, 1),
+        ]
+    )
 
     annotations = [
         Field(fieldtype="full_match", text="ab", bbox=BBox(0.4, 0.4, 0.7, 0.7), page=0),
@@ -54,7 +50,7 @@ def test_get_matches() -> None:
         Field(fieldtype="no_match", bbox=BBox(0, 0, 1.0, 1.0), page=1),  # mismatching page
     ]
 
-    matching = get_matches(predictions=predictions, annotations=annotations, pccs=pccs)
+    matching = get_matches(predictions=predictions, annotations=annotations, pcc_set=pcc_set)
     assert len(matching.matches) == 2
     assert all(
         match.pred.fieldtype == match.gold.fieldtype == "full_match" for match in matching.matches
@@ -63,7 +59,7 @@ def test_get_matches() -> None:
     assert len(matching.misses) == 3
 
     matching_iou05 = get_matches(
-        predictions=predictions, annotations=annotations, pccs=pccs, iou_threshold=0.5
+        predictions=predictions, annotations=annotations, pcc_set=pcc_set, iou_threshold=0.5
     )
     assert len(matching_iou05.matches) == 3
     assert all(
