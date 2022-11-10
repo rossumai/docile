@@ -85,7 +85,7 @@ def evaluate_dataset(
         lir_annotations = document.annotation.li_fields
         lir_predictions = docid_to_lir_predictions.get(document.docid, [])
 
-        # TODO: pass use_text to matching # noqa
+        # TODO: pass use_text to matching
         for use_text in [False, True] if with_text else [False]:
             metric = "kile_with_text" if use_text else "kile"
             kile_matching = get_matches(
@@ -123,5 +123,8 @@ def _get_score_matched_pairs(field_matching: FieldMatching) -> Iterable[Tuple[fl
             (match.pred.score if match.pred.score is not None else 1, True)
             for match in field_matching.matches
         ),
-        ((pred.score if pred.score is not None else 1, False) for pred in field_matching.extra),
+        (
+            (pred.score if pred.score is not None else 1, False)
+            for pred in field_matching.false_positives
+        ),
     )

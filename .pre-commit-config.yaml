@@ -29,11 +29,9 @@ repos:
           flake8-comprehensions,
           flake8-docstrings,
           flake8-eradicate,
-          flake8-fixme,
           flake8-plugin-utils,
           flake8-print,
           flake8-polyfill,
-          flake8-todo,
           flake8-unused-arguments,
           flake8-use-fstring
         ]

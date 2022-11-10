@@ -19,12 +19,12 @@ class DocumentAnnotation(CachedObject[Dict]):
 
     @property
     def fields(self) -> List[Field]:
-        # TODO: fields without "bbox" should be removed during export # noqa
+        # TODO: fields without "bbox" should be removed during export
         return [Field.from_annotation(a) for a in self.content["field_extractions"] if "bbox" in a]
 
     @property
     def li_fields(self) -> List[Field]:
-        # TODO: fields without "bbox" should be removed during export # noqa
+        # TODO: fields without "bbox" should be removed during export
         return [
             Field.from_annotation(a) for a in self.content["line_item_extractions"] if "bbox" in a
         ]

@@ -41,6 +41,11 @@ class PCCSet:
         }
 
     def get_covered_pccs(self, bbox: BBox, page: int) -> Set[PCC]:
+        """Return all pccs on 'page' covered by 'bbox'."""
+
+        # All pccs on the page are sorted by x and y coordinates. Then we find all pccs between
+        # [bbox.left, bbox.right] and all pccs between [bbox.top, bbox.bottom] and return pccs in
+        # the intersection of these two sets.
         sorted_x_pccs = self._page_to_sorted_x_pccs[page]
         sorted_y_pccs = self._page_to_sorted_y_pccs[page]
 

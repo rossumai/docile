@@ -17,12 +17,12 @@ class MatchedPair:
 @dataclass(frozen=True)
 class FieldMatching:
     matches: Sequence[MatchedPair]
-    extra: Sequence[Field]  # not matched predictions
-    misses: Sequence[Field]  # not matched annotations
+    false_positives: Sequence[Field]  # not matched predictions
+    false_negatives: Sequence[Field]  # not matched annotations
 
 
 def pccs_iou(pcc_set: PCCSet, gold_bbox: BBox, pred_bbox: BBox, page: int) -> float:
-    """Calculate IOU over Pseudo Character Boxes."""
+    """Calculate IOU over Pseudo Character Centers."""
     if not gold_bbox.intersects(pred_bbox):
         return 0
 
@@ -73,7 +73,7 @@ def get_matches(
         key_to_predictions[p.fieldtype].append(p)
 
     matched_pairs: List[MatchedPair] = []
-    extra: List[Field] = []
+    false_positives: List[Field] = []
 
     all_fieldtypes = set(key_page_to_annotations.keys()).union(key_to_predictions.keys())
     for fieldtype in all_fieldtypes:
@@ -90,13 +90,15 @@ def get_matches(
                     key_page_to_annotations[fieldtype][pred.page].pop(gold_i)
                     break
             else:
-                extra.append(pred)
+                false_positives.append(pred)
 
-    misses = [
+    false_negatives = [
         field
         for page_to_fields in key_page_to_annotations.values()
         for fields in page_to_fields.values()
         for field in fields
     ]
 
-    return FieldMatching(matches=matched_pairs, extra=extra, misses=misses)
+    return FieldMatching(
+        matches=matched_pairs, false_positives=false_positives, false_negatives=false_negatives
+    )
