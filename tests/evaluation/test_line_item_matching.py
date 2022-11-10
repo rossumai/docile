@@ -86,5 +86,5 @@ def test_get_lir_matches() -> None:
         MatchedPair(pred=predictions[5], gold=annotations[4]),
         MatchedPair(pred=predictions[6], gold=annotations[5]),
     }
-    assert set(field_matching.extra) == {predictions[1], predictions[2], predictions[4]}
-    assert set(field_matching.misses) == {annotations[1], annotations[2]}
+    assert set(field_matching.false_positives) == {predictions[1], predictions[2], predictions[4]}
+    assert set(field_matching.false_negatives) == {annotations[1], annotations[2]}

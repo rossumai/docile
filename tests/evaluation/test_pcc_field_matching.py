@@ -55,8 +55,8 @@ def test_get_matches() -> None:
     assert all(
         match.pred.fieldtype == match.gold.fieldtype == "full_match" for match in matching.matches
     )
-    assert len(matching.extra) == 4
-    assert len(matching.misses) == 3
+    assert len(matching.false_positives) == 4
+    assert len(matching.false_negatives) == 3
 
     matching_iou05 = get_matches(
         predictions=predictions, annotations=annotations, pcc_set=pcc_set, iou_threshold=0.5
@@ -67,5 +67,5 @@ def test_get_matches() -> None:
         and match.pred.fieldtype in ["full_match", "partial_match"]
         for match in matching_iou05.matches
     )
-    assert len(matching_iou05.extra) == 3
-    assert len(matching_iou05.misses) == 2
+    assert len(matching_iou05.false_positives) == 3
+    assert len(matching_iou05.false_negatives) == 2

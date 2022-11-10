@@ -145,8 +145,8 @@ def test_get_score_matched_pairs() -> None:
             MatchedPair(pred=Field(bbox=bbox, page=0, score=1), gold=f_gold),
             MatchedPair(pred=Field(bbox=bbox, page=0, score=0.5), gold=f_gold),
         ],
-        extra=[Field(bbox=bbox, page=0, score=0.4), Field(bbox=bbox, page=0, score=0.8)],
-        misses=[f_gold],
+        false_positives=[Field(bbox=bbox, page=0, score=0.4), Field(bbox=bbox, page=0, score=0.8)],
+        false_negatives=[f_gold],
     )
 
     actual_score_matched_pairs = list(_get_score_matched_pairs(field_matching))
@@ -158,8 +158,8 @@ def test_get_score_matched_pairs_none_scores() -> None:
     f_no_score = Field(bbox=BBox(0, 0, 1, 1), page=0)
     field_matching = FieldMatching(
         matches=[MatchedPair(pred=f_no_score, gold=f_no_score)],
-        extra=[f_no_score, f_no_score],
-        misses=[f_no_score],
+        false_positives=[f_no_score, f_no_score],
+        false_negatives=[f_no_score],
     )
     actual_score_matched_pairs = list(_get_score_matched_pairs(field_matching))
     expected_score_matched_pairs = [(1, True), (1, False), (1, False)]
