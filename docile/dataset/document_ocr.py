@@ -14,7 +14,7 @@ class DocumentOCR(CachedObject[Dict]):
     _model = None
 
     def __init__(self, path: Path, pdf_path: Path) -> None:
-        super().__init__(path=path, mem_cache=True, disk_cache=True)
+        super().__init__(path=path, mem_cache=False, disk_cache=True)
         self.pdf_path = pdf_path
 
     @classmethod
