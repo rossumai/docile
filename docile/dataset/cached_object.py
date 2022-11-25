@@ -48,4 +48,9 @@ class CachedObject(Generic[CT]):
             return content
 
         # Nothing had been found, we need to predict
-        return self.predict_and_overwrite()
+        try:
+            return self.predict_and_overwrite()
+        except NotImplementedError:
+            raise ValueError(
+                f"Object {self.path} not found in memory, on disk and cannot be created"
+            )

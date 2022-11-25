@@ -28,7 +28,7 @@ class DocumentImages(CachedObject[List[Image.Image]]):
             Check https://pdf2image.readthedocs.io/en/latest/reference.html for documentation of
             this parameter.
         """
-        super().__init__(path=path, mem_cache=True, disk_cache=True)
+        super().__init__(path=path, mem_cache=False, disk_cache=True)
         self.pdf_path = pdf_path
         self.page_count = page_count
         self.size = size
