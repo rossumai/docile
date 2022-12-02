@@ -8,6 +8,11 @@ authors = [
     "Milan Sulc <milan.sulc@rossum.ai>"
 ]
 readme = "README.md"
+homepage = "https://docile.rossum.ai/"
+repository = "https://github.com/rossumai/docile"
+packages = [
+    { include = "docile" },
+]
 
 [tool.poetry.dependencies]
 python = "~3.10"

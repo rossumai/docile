@@ -14,4 +14,7 @@ RUN pip3 install poetry
 WORKDIR /app
 COPY poetry.lock pyproject.toml /app/
 
+COPY docile /app/docile
+COPY README.md /app/README.md
+
 RUN poetry install --no-interaction --with test --with doctr
