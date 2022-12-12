@@ -2,7 +2,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Sequence
 
-from docile.dataset import BBox, Field, PCCSet
+from docile.dataset import BBox, Field
+from docile.evaluation.pcc import PCCSet
 
 # Small value for robust >= on floats.
 EPS = 1e-6

@@ -1,12 +1,12 @@
 FROM python:3.10
 
-# cv2 dependencies
 RUN apt-get update
-RUN apt-get install ffmpeg libsm6 libxext6 -y
 
-# install screen
-RUN apt-get install screen -y
-RUN echo "defshell -bash" > ~/.screenrc
+# Install opencv-python dependency
+RUN apt-get install libgl1 -y
+
+# Install poppler for pdf2image (converting pdf to images)
+RUN apt-get install poppler-utils -y
 
 # Install poetry
 RUN pip3 install poetry

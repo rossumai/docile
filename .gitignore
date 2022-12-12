@@ -3,3 +3,5 @@
 __pycache__/
 
 /data/
+
+tests/data/sample-dataset/cached_images/

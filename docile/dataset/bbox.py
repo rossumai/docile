@@ -1,23 +1,33 @@
 import dataclasses
-from typing import Tuple
+from typing import Generic, Tuple, TypeVar
+
+T = TypeVar("T", int, float)
 
 
 @dataclasses.dataclass(frozen=True)
-class BBox:
-    left: float
-    top: float
-    right: float
-    bottom: float
+class BBox(Generic[T]):
+    left: T
+    top: T
+    right: T
+    bottom: T
 
-    def to_absolute_coords(self, width: float, height: float) -> "BBox":
+    def to_absolute_coords(self, width: float, height: float) -> "BBox[int]":
         return BBox(
-            self.left * width,
-            self.top * height,
-            self.right * width,
-            self.bottom * height,
+            round(self.left * width),
+            round(self.top * height),
+            round(self.right * width),
+            round(self.bottom * height),
         )
 
-    def to_tuple(self) -> Tuple[float, float, float, float]:
+    def to_relative_coords(self, width: float, height: float) -> "BBox[float]":
+        return BBox(
+            self.left / width,
+            self.top / height,
+            self.right / width,
+            self.bottom / height,
+        )
+
+    def to_tuple(self) -> Tuple[T, T, T, T]:
         return self.left, self.top, self.right, self.bottom
 
     def intersects(self, other: "BBox") -> bool:

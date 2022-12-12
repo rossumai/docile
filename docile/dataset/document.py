@@ -1,4 +1,6 @@
 from pathlib import Path
+from types import TracebackType
+from typing import Optional, Type
 
 from PIL import Image, ImageDraw
 
@@ -10,7 +12,12 @@ from docile.dataset.types import OptionalImageSize
 
 
 class Document:
-    """Structure representing a single document, with or without annotations."""
+    """
+    Structure representing a single document, with or without annotations.
+
+    You can enter the document using the `with` statement to temporarily cache its annoations, ocr
+    and generated images in memory.
+    """
 
     def __init__(self, docid: str, dataset_path: Path):
         self.docid = docid
@@ -26,6 +33,7 @@ class Document:
         self.images = {}
 
         self.page_count = self.annotation.page_count
+        self._open = False
 
     def page_image(self, page: int, image_size: OptionalImageSize = (None, None)) -> Image.Image:
         """
@@ -46,8 +54,26 @@ class Document:
                 page_count=self.page_count,
                 size=image_size,
             )
+            if self._open:
+                self.images[image_size].__enter__()
 
         return self.images[image_size].content[page]
+
+    def __enter__(self) -> "Document":
+        self._open = True
+        for ctx in (self.ocr, self.annotation, *self.images.values()):
+            ctx.__enter__()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],  # noqa: U100
+        exc: Optional[BaseException],  # noqa: U100
+        traceback: Optional[TracebackType],  # noqa: U100
+    ) -> None:
+        self._open = False
+        for ctx in (self.ocr, self.annotation, *self.images.values()):
+            ctx.__exit__(exc_type, exc, traceback)
 
     def page_image_with_fields(
         self, page: int, image_size: OptionalImageSize = (None, None), show_ocr_words: bool = False

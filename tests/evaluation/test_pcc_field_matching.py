@@ -1,6 +1,7 @@
 import pytest
 
-from docile.dataset import PCC, BBox, Field, PCCSet
+from docile.dataset import BBox, Field
+from docile.evaluation import PCC, PCCSet
 from docile.evaluation.pcc_field_matching import get_matches, pccs_iou
 
 

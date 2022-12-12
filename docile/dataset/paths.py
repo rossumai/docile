@@ -5,7 +5,7 @@ from docile.dataset.types import OptionalImageSize
 
 class DataPaths:
     def __init__(self, dataset_path: Path):
-        self.dataset_path = dataset_path
+        self.dataset_path = Path(dataset_path)
 
     def dataset_index_path(self, split_name: str) -> Path:
         return (self.dataset_path / split_name).with_suffix(".json")

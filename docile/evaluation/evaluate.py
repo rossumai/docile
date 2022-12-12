@@ -4,9 +4,10 @@ from typing import Dict, Iterable, Mapping, Sequence, Tuple
 
 from tqdm import tqdm
 
-from docile.dataset import Dataset, Field, PCCSet
+from docile.dataset import Dataset, Field
 from docile.evaluation.average_precision import compute_average_precision
 from docile.evaluation.line_item_matching import get_lir_matches
+from docile.evaluation.pcc import get_document_pccs
 from docile.evaluation.pcc_field_matching import FieldMatching, get_matches
 
 logger = logging.getLogger(__name__)
@@ -78,7 +79,7 @@ def evaluate_dataset(
     metric_to_total_annotations = {metric: 0 for metric in metric_to_score_matched_pairs.keys()}
 
     for document in tqdm(dataset, desc="Run matching for documents"):
-        pcc_set = PCCSet(document.ocr.get_all_pccs())
+        pcc_set = get_document_pccs(document)
 
         kile_annotations = document.annotation.fields
         kile_predictions = docid_to_kile_predictions.get(document.docid, [])

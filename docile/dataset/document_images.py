@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List
 
@@ -7,6 +8,8 @@ from PIL import Image
 from docile.dataset.cached_object import CachedObject
 from docile.dataset.paths import DataPaths
 from docile.dataset.types import OptionalImageSize
+
+logger = logging.getLogger(__name__)
 
 
 class DocumentImages(CachedObject[List[Image.Image]]):
@@ -38,7 +41,14 @@ class DocumentImages(CachedObject[List[Image.Image]]):
         for page_i in range(self.page_count):
             page_path = DataPaths.cache_page_image_path(self.path, page_i)
             with Image.open(str(page_path)) as page_img:
-                page_img.load()
+                try:
+                    page_img.load()
+                except Exception as e:
+                    logger.error(
+                        f"Error while loading image {page_path}, consider removing directory "
+                        f"{self.path} from cache"
+                    )
+                    raise e
                 images.append(page_img)
         return images
 
