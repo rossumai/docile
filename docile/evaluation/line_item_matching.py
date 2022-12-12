@@ -3,7 +3,8 @@ from typing import Dict, Iterable, List, Sequence, Tuple
 
 import networkx
 
-from docile.dataset import BBox, Field, PCCSet
+from docile.dataset import BBox, Field
+from docile.evaluation.pcc import PCCSet
 from docile.evaluation.pcc_field_matching import FieldMatching, MatchedPair, get_matches
 
 

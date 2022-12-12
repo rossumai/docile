@@ -1,6 +1,7 @@
 import pytest
 
-from docile.dataset import PCC, BBox, Field, PCCSet
+from docile.dataset import BBox, Field
+from docile.evaluation import PCC, PCCSet
 from docile.evaluation.line_item_matching import (
     _get_covering_bbox,
     _get_line_item_id,

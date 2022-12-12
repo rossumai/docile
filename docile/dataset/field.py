@@ -18,8 +18,3 @@ class Field:
         annotation_copy = dict(annotation_dict)
         bbox = BBox(*(annotation_copy.pop("bbox")))
         return cls(bbox=bbox, **annotation_copy)
-
-    @classmethod
-    def from_ocr(cls, ocr_dict: Mapping[str, Any], page: int) -> "Field":
-        lt, rb = ocr_dict["geometry"]
-        return cls(text=ocr_dict["value"], bbox=BBox(lt[0], lt[1], rb[0], rb[1]), page=page)
