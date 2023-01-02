@@ -3,7 +3,7 @@ import functools
 import logging
 from bisect import bisect_left, bisect_right
 from collections import defaultdict
-from typing import List, Sequence, Set
+from typing import Iterator, List, Sequence, Set
 
 from docile.dataset import BBox, Document, Field
 
@@ -31,6 +31,10 @@ class PCCSet:
         self._page_to_sorted_y_pccs = {
             page: sorted(page_pccs, key=lambda p: p.y) for page, page_pccs in page_to_pccs.items()
         }
+
+    def __iter__(self) -> Iterator[PCC]:
+        for pccs in self._page_to_sorted_x_pccs.values():
+            yield from pccs
 
     def get_covered_pccs(self, bbox: BBox, page: int) -> Set[PCC]:
         """Return all pccs on `page` covered by `bbox`."""

@@ -2,7 +2,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Optional, Type
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from docile.dataset.document_annotation import DocumentAnnotation
 from docile.dataset.document_images import DocumentImages
@@ -74,24 +74,3 @@ class Document:
         self._open = False
         for ctx in (self.ocr, self.annotation, *self.images.values()):
             ctx.__exit__(exc_type, exc, traceback)
-
-    def page_image_with_fields(
-        self, page: int, image_size: OptionalImageSize = (None, None), show_ocr_words: bool = False
-    ) -> Image.Image:
-        """Return page image with bboxes representing fields."""
-
-        page_img = self.page_image(page, image_size)
-
-        draw_img = page_img.copy()
-        draw = ImageDraw.Draw(draw_img)
-
-        for fields, color in [
-            (self.annotation.fields, "green"),
-            (self.annotation.li_fields, "blue"),
-        ] + ([(self.ocr.get_all_words(page), "red")] if show_ocr_words else []):
-            for field in fields:
-                if field.page != page:
-                    continue
-                scaled_bbox = field.bbox.to_absolute_coords(draw_img.width, draw_img.height)
-                draw.rectangle(scaled_bbox.to_tuple(), outline=color)
-        return draw_img
