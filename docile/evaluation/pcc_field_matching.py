@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import List, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 from docile.dataset import BBox, Field
 from docile.evaluation.pcc import PCCSet
@@ -11,15 +11,46 @@ EPS = 1e-6
 
 @dataclass(frozen=True)
 class MatchedPair:
-    gold: Field
     pred: Field
+    gold: Field
 
 
 @dataclass(frozen=True)
 class FieldMatching:
-    matches: Sequence[MatchedPair]
-    false_positives: Sequence[Field]  # not matched predictions
+    """
+    Structure to represent matching between two sets of fields, predictions and annotations.
+
+    Predictions are stored in the original order in `ordered_predictions_with_match` together with
+    the matched annotations (also called gold fields) or None (when they are not matched). If you
+    do not care about the original order of predictions, you can use the following
+    attributes/properties:
+    * matches: i.e., true positives. Sequence of matched pairs.
+    * false_positives: predictions that were not matched.
+    * false_negatives: annotations that were not matched.
+    """
+
+    ordered_predictions_with_match: Sequence[Tuple[Field, Optional[Field]]]
     false_negatives: Sequence[Field]  # not matched annotations
+
+    @property
+    def matches(self) -> Sequence[MatchedPair]:
+        """Return matched pairs of predicted and gold fields."""
+        return [
+            MatchedPair(pred=pred, gold=gold)
+            for pred, gold in self.ordered_predictions_with_match
+            if gold is not None
+        ]
+
+    @property
+    def false_positives(self) -> Sequence[Field]:
+        return [pred for pred, gold in self.ordered_predictions_with_match if gold is None]
+
+    @classmethod
+    def empty(cls, predictions: Sequence[Field], annotations: Sequence[Field]) -> "FieldMatching":
+        return cls(
+            ordered_predictions_with_match=[(pred, None) for pred in predictions],
+            false_negatives=annotations,
+        )
 
 
 def pccs_iou(pcc_set: PCCSet, gold_bbox: BBox, pred_bbox: BBox, page: int) -> float:
@@ -65,41 +96,42 @@ def get_matches(
     if have_scores > 0 and have_scores < len(predictions):
         raise ValueError("Either all or no predictions need to have scores")
 
-    key_page_to_annotations = defaultdict(lambda: defaultdict(list))
+    fieldtype_page_to_annotations = defaultdict(lambda: defaultdict(list))
     for a in annotations:
-        key_page_to_annotations[a.fieldtype][a.page].append(a)
+        fieldtype_page_to_annotations[a.fieldtype][a.page].append(a)
 
-    key_to_predictions = defaultdict(list)
-    for p in predictions:
-        key_to_predictions[p.fieldtype].append(p)
-
-    matched_pairs: List[MatchedPair] = []
-    false_positives: List[Field] = []
-
-    all_fieldtypes = set(key_page_to_annotations.keys()).union(key_to_predictions.keys())
-    for fieldtype in all_fieldtypes:
-        for pred in sorted(key_to_predictions[fieldtype], key=lambda pred: -(pred.score or 1)):
-            for gold_i, gold in enumerate(key_page_to_annotations[fieldtype][pred.page]):
-                iou = pccs_iou(
-                    pcc_set=pcc_set,
-                    gold_bbox=gold.bbox,
-                    pred_bbox=pred.bbox,
-                    page=pred.page,
-                )
-                if iou > iou_threshold - EPS:
-                    matched_pairs.append(MatchedPair(gold=gold, pred=pred))
-                    key_page_to_annotations[fieldtype][pred.page].pop(gold_i)
-                    break
-            else:
-                false_positives.append(pred)
+    ordered_predictions_with_match: List[Tuple[Field, Optional[Field]]] = [
+        (pred, None) for pred in predictions
+    ]
+    for pred_i, pred in sorted(enumerate(predictions), key=_sort_by_score):
+        gold_candidates = fieldtype_page_to_annotations[pred.fieldtype][pred.page]
+        for gold_i, gold in enumerate(gold_candidates):
+            iou = pccs_iou(
+                pcc_set=pcc_set,
+                gold_bbox=gold.bbox,
+                pred_bbox=pred.bbox,
+                page=pred.page,
+            )
+            # This is equivalent to iou >= iou_threshold but accounts for rounding errors
+            if iou > iou_threshold - EPS:
+                ordered_predictions_with_match[pred_i] = (pred, gold)
+                gold_candidates.pop(gold_i)
+                break
 
     false_negatives = [
         field
-        for page_to_fields in key_page_to_annotations.values()
+        for page_to_fields in fieldtype_page_to_annotations.values()
         for fields in page_to_fields.values()
         for field in fields
     ]
 
-    return FieldMatching(
-        matches=matched_pairs, false_positives=false_positives, false_negatives=false_negatives
-    )
+    return FieldMatching(ordered_predictions_with_match, false_negatives)
+
+
+def _sort_by_score(pred_with_index: Tuple[int, Field]) -> Tuple[float, int]:
+    """Sort predictions by score, use original order for equal scores."""
+    pred_i, pred = pred_with_index
+    score = pred.score
+    if score is None:
+        score = 1
+    return (-score, pred_i)

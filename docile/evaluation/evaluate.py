@@ -1,6 +1,6 @@
-import itertools
 import logging
-from typing import Dict, Iterable, Mapping, Sequence, Tuple
+import operator
+from typing import Dict, Mapping, Optional, Sequence, Tuple
 
 from tqdm import tqdm
 
@@ -11,6 +11,9 @@ from docile.evaluation.pcc import get_document_pccs
 from docile.evaluation.pcc_field_matching import FieldMatching, get_matches
 
 logger = logging.getLogger(__name__)
+
+
+PredictionSortKey = Tuple[float, int, int]
 
 
 def evaluate_dataset(
@@ -72,11 +75,11 @@ def evaluate_dataset(
                 f"{metric}: Did not find any predictions for {missing}/{len(dataset)} documents"
             )
 
-    metric_to_score_matched_pairs = {"kile": [], "lir": []}
+    metric_to_sort_key_matched_pairs = {"kile": [], "lir": []}
     if with_text:
-        metric_to_score_matched_pairs.update({"kile_with_text": [], "lir_with_text": []})
+        metric_to_sort_key_matched_pairs.update({"kile_with_text": [], "lir_with_text": []})
 
-    metric_to_total_annotations = {metric: 0 for metric in metric_to_score_matched_pairs.keys()}
+    metric_to_total_annotations = {metric: 0 for metric in metric_to_sort_key_matched_pairs.keys()}
 
     for document in tqdm(dataset, desc="Run matching for documents"):
         pcc_set = get_document_pccs(document)
@@ -95,7 +98,9 @@ def evaluate_dataset(
                 pcc_set=pcc_set,
                 iou_threshold=iou_threshold,
             )
-            metric_to_score_matched_pairs[metric].extend(_get_score_matched_pairs(kile_matching))
+            metric_to_sort_key_matched_pairs[metric].extend(
+                _get_sort_key_matched_pairs(kile_matching, document.docid)
+            )
             metric_to_total_annotations[metric] += len(kile_annotations)
 
             metric = "lir_with_text" if use_text else "lir"
@@ -105,27 +110,47 @@ def evaluate_dataset(
                 pcc_set=pcc_set,
                 iou_threshold=iou_threshold,
             )
-            metric_to_score_matched_pairs[metric].extend(_get_score_matched_pairs(lir_matching))
+            metric_to_sort_key_matched_pairs[metric].extend(
+                _get_sort_key_matched_pairs(lir_matching, document.docid)
+            )
             metric_to_total_annotations[metric] += len(lir_annotations)
 
-    metric_to_average_precision = {
-        metric: compute_average_precision(
-            predictions_score_matched=score_matched_pairs,
+    metric_to_average_precision = {}
+    for metric, sort_key_matched_pairs in metric_to_sort_key_matched_pairs.items():
+        sorted_predictions_matched = [
+            matched
+            for _sort_key, matched in sorted(sort_key_matched_pairs, key=operator.itemgetter(0))
+        ]
+        metric_to_average_precision[metric] = compute_average_precision(
+            sorted_predictions_matched=sorted_predictions_matched,
             total_annotations=metric_to_total_annotations[metric],
         )
-        for metric, score_matched_pairs in metric_to_score_matched_pairs.items()
-    }
     return metric_to_average_precision
 
 
-def _get_score_matched_pairs(field_matching: FieldMatching) -> Iterable[Tuple[float, bool]]:
-    return itertools.chain(
-        (
-            (match.pred.score if match.pred.score is not None else 1, True)
-            for match in field_matching.matches
-        ),
-        (
-            (pred.score if pred.score is not None else 1, False)
-            for pred in field_matching.false_positives
-        ),
-    )
+def _get_prediction_sort_key(
+    score: Optional[float], prediction_i: int, docid: str
+) -> PredictionSortKey:
+    """
+    Get a sort key for a prediction.
+
+    For evaluation purposes, predictions are sorted by these criteria (sorted by importance):
+    1.  Score from the highest to the lowest.
+    2.  Original order in which the predictions were passed in.
+    3.  The document id. Document id is hashed together with the prediction_i to make sure
+        documents are not always sorted in the same order (for different prediction indices) which
+        would make some documents more important for the evaluation than others.
+    """
+    if score is None:
+        score = 1
+    return (-score, prediction_i, hash((docid, prediction_i)))
+
+
+def _get_sort_key_matched_pairs(
+    field_matching: FieldMatching, docid: str
+) -> Sequence[Tuple[PredictionSortKey, bool]]:
+    """For each prediction return its sort key and an indicator whether it was matched."""
+    return [
+        (_get_prediction_sort_key(pred.score, pred_i, docid), gold is not None)
+        for pred_i, (pred, gold) in enumerate(field_matching.ordered_predictions_with_match)
+    ]

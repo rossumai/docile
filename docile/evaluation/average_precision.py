@@ -1,38 +1,30 @@
-import itertools
-from typing import Sequence, Tuple
-
-
-def _sort_by_score(score_matched: Tuple[float, bool]) -> float:
-    """Return -score to sort (score,match) pairs from the highest to the lowest score."""
-    return -score_matched[0]
+from typing import Sequence
 
 
 def compute_average_precision(
-    predictions_score_matched: Sequence[Tuple[float, bool]],
+    sorted_predictions_matched: Sequence[bool],
     total_annotations: int,
 ) -> float:
     """
     Compute average precision (AP).
 
-    There are multiple design decisions that influence the result:
-    1.  All predictions with the same score are added in a batch. For the case when all scores are
-        equal the metric is equivalent to 'precision * recall'.
-    2.  When the precision-recall curve has a zig-zag pattern (higher recall does not mean lower
-        precision), the "gaps are filled".
-    3.  For two consecutive (recall,precision) pairs (r1,p1), (r2,p2) where r2>r1 we use the
+    There are some design decisions that influence the result of AP computation. These were done in
+    line with how AP is computed in COCO evaluation for object detection.
+    1.  When the precision-recall curve has a zig-zag pattern (precision increased for higher
+        recall), the "gaps are filled".
+    2.  For two consecutive (recall,precision) pairs (r1,p1), (r2,p2) where r2>r1 we use the
         precision 'p2' in the interval [r1,r2] when computing the Average Precision.
 
-    Point 1. influences how we construct the sequence of points (p,r) specifying the precision for
-    some recall threshold. Points 2. and 3. can be also explained as computing the integral (from 0
-    to 1) over function 'precision(r)' which is defined as:
+    Points 2. and 3. can be also explained as computing the integral (from 0 to 1) over a function
+    'precision(r)' which is defined as:
         precision(r) == max{p' | there exists (p',r') with r' >= r}
 
 
     Parameters
     ----------
-    predictions_score_matched
-        List of predictions with their score (confidence) and whether a match was found for the
-        prediction or not.
+    sorted_predictions_matched
+        An indicator for each prediction whether it was matched or not. Predictions should be
+        sorted by score (from the highest to the lowest).
     total_annotations
         Total number of ground truth annotations, used to calculate the recall.
 
@@ -44,12 +36,10 @@ def compute_average_precision(
     true_positives = 0
     observed_predictions = 0
 
-    # All predictions with the same score are added in a batch.
-    sorted_predictions = sorted(predictions_score_matched, key=_sort_by_score)
-    for _score, group_it in itertools.groupby(sorted_predictions, key=_sort_by_score):
-        group = list(group_it)
-        true_positives += sum(1 for _score, matched in group if matched)
-        observed_predictions += len(group)
+    # Iteratively update precision and recall.
+    for matched in sorted_predictions_matched:
+        true_positives += 1 if matched else 0
+        observed_predictions += 1
         recall_precision_pairs.append(
             [(true_positives / total_annotations), (true_positives / observed_predictions)]
         )

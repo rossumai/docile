@@ -1,11 +1,11 @@
-import itertools
-from typing import Dict, Iterable, List, Sequence, Tuple
+from collections import defaultdict
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import networkx
 
 from docile.dataset import BBox, Field
 from docile.evaluation.pcc import PCCSet
-from docile.evaluation.pcc_field_matching import FieldMatching, MatchedPair, get_matches
+from docile.evaluation.pcc_field_matching import FieldMatching, get_matches
 
 
 class LineItemsGraph:
@@ -102,23 +102,19 @@ def get_lir_matches(
     Matching of line item fields and used maximum matching between line item ids (prediction to gold).
     """
     if len(predictions) == 0 or len(annotations) == 0:
-        return (
-            FieldMatching(matches=[], false_positives=predictions, false_negatives=annotations),
-            {},
-        )
+        return (FieldMatching.empty(predictions, annotations), {})
 
-    pred_line_items = {
-        li_i: list(group)
-        for li_i, group in itertools.groupby(
-            sorted(predictions, key=_get_line_item_id), key=_get_line_item_id
-        )
-    }
-    gold_line_items = {
-        li_i: list(group)
-        for li_i, group in itertools.groupby(
-            sorted(annotations, key=_get_line_item_id), key=_get_line_item_id
-        )
-    }
+    pred_line_items = defaultdict(list)
+    pred_i_to_index_in_li = {}
+    for pred_i, pred in enumerate(predictions):
+        li_i = _get_line_item_id(pred)
+        pred_i_to_index_in_li[pred_i] = len(pred_line_items[li_i])
+        pred_line_items[li_i].append(pred)
+
+    gold_line_items = defaultdict(list)
+    for gold in annotations:
+        li_i = _get_line_item_id(gold)
+        gold_line_items[li_i].append(gold)
 
     # We precompute the covering bbox of each line item. This is used to speedup the computation
     # since prediction/gold line items that are completely disjoint cannot have any matches.
@@ -137,9 +133,7 @@ def get_lir_matches(
         for gold_li_i, golds in gold_line_items.items():
             # If the bboxes covering the line items are disjoint, there cannot be any field matches
             if not pred_li_bbox[pred_li_i].intersects(gold_li_bbox[gold_li_i]):
-                field_matching = FieldMatching(
-                    matches=[], false_positives=preds, false_negatives=golds
-                )
+                field_matching = FieldMatching.empty(preds, golds)
             else:
                 field_matching = get_matches(
                     predictions=preds,
@@ -155,29 +149,33 @@ def get_lir_matches(
     maximum_matching = line_items_graph.get_maximum_matching()
 
     # Construct matching on the field level from the line item matching.
-    matched_pairs: List[MatchedPair] = []
-    false_positives: List[Field] = []
-    false_negatives: List[Field] = []
-    for pred_li_i, preds in pred_line_items.items():
+    ordered_predictions_with_match: List[Tuple[Field, Optional[Field]]] = []
+    for pred_i, pred in enumerate(predictions):
+        pred_li_i = _get_line_item_id(pred)
         if pred_li_i not in maximum_matching:
-            false_positives.extend(preds)
+            ordered_predictions_with_match.append((pred, None))
             continue
 
         gold_li_i = maximum_matching[pred_li_i]
         field_matching = line_items_graph.get_pair_field_matching(
             pred_li_i=pred_li_i, gold_li_i=gold_li_i
         )
-        matched_pairs.extend(field_matching.matches)
-        false_positives.extend(field_matching.false_positives)
-        false_negatives.extend(field_matching.false_negatives)
+        pred_i_in_li = pred_i_to_index_in_li[pred_i]
+        ordered_predictions_with_match.append(
+            field_matching.ordered_predictions_with_match[pred_i_in_li]
+        )
 
+    false_negatives: List[Field] = []
+    maximum_matching_gold_to_pred = {v: k for k, v in maximum_matching.items()}
     for gold_li_i, golds in gold_line_items.items():
-        if gold_li_i not in maximum_matching.values():
+        if gold_li_i in maximum_matching_gold_to_pred:
+            pred_li_i = maximum_matching_gold_to_pred[gold_li_i]
+            field_matching = line_items_graph.get_pair_field_matching(
+                pred_li_i=pred_li_i, gold_li_i=gold_li_i
+            )
+            false_negatives.extend(field_matching.false_negatives)
+        else:
             false_negatives.extend(golds)
 
-    lir_field_matching = FieldMatching(
-        matches=matched_pairs,
-        false_positives=false_positives,
-        false_negatives=false_negatives,
-    )
+    lir_field_matching = FieldMatching(ordered_predictions_with_match, false_negatives)
     return lir_field_matching, maximum_matching
