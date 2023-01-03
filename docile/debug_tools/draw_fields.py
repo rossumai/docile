@@ -80,12 +80,12 @@ def page_image_with_matching(
     draw = ImageDraw.Draw(draw_img, "RGBA")
 
     for fields, outline, width, fill in [
-        ([match.pred for match in field_matching.matches], GREEN, 3, (0, 0, 255, 96)),
-        ([match.gold for match in field_matching.matches], GREEN, 3, (255, 255, 0, 96)),
-        (field_matching.false_negatives, RED, 3, (0, 0, 255, 96)),
+        ([match.pred for match in field_matching.matches], GREEN, 3, (255, 255, 0, 96)),
+        ([match.gold for match in field_matching.matches], GREEN, 3, (0, 0, 255, 96)),
         (field_matching.false_positives, RED, 3, (255, 255, 0, 96)),
+        (field_matching.false_negatives, RED, 3, (0, 0, 255, 96)),
     ]:
-        for field in fields:
+        for field in [x for x in fields if x.page == page]:
             draw_field(draw, field, outline, width, fill)
 
     pcc_radius = 2
