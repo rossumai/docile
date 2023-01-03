@@ -1,12 +1,13 @@
 import random
 from copy import deepcopy
 from dataclasses import replace
+from unittest import mock
 
 import pytest
 
 from docile.dataset import BBox, Dataset, Field
-from docile.evaluation.evaluate import _get_score_matched_pairs, evaluate_dataset
-from docile.evaluation.pcc_field_matching import FieldMatching, MatchedPair
+from docile.evaluation.evaluate import _get_sort_key_matched_pairs, evaluate_dataset
+from docile.evaluation.pcc_field_matching import FieldMatching
 
 
 def test_evaluate_dataset_perfect_predictions(
@@ -61,6 +62,7 @@ def test_evaluate_dataset_kile_missing_and_wrong_predictions(
             replace(f, score=1) for f in sample_dataset[sample_dataset_docid].annotation.fields
         ]
     }
+    # 1 missing and 3 wrong predictions
     kile_predictions[sample_dataset_docid].pop()
     kile_predictions[sample_dataset_docid][0] = replace(
         kile_predictions[sample_dataset_docid][0],
@@ -76,10 +78,17 @@ def test_evaluate_dataset_kile_missing_and_wrong_predictions(
         fieldtype="mock_fieldtype",
     )
 
+    # After sorting the predictions by score and prediction id, we get the following list:
+    #       False, False, True, True, True, ..., True, False
+    # The best precision is achieved for the highest recall which means it will be used also for
+    # the smaller recall values (check average_precison.py for details).
+
     fields = len(sample_dataset[sample_dataset_docid].annotation.fields)
-    precision = (fields - 4) / (fields - 2)  # only predictions with score == 1 are counted
-    recall = (fields - 4) / fields
-    kile = precision * recall
+    true_positives = fields - 4
+    recall = true_positives / fields
+    # the prediction with score < 1 does not affect the result
+    precision = true_positives / (fields - 2)
+    kile = recall * precision
     evaluation_dict = evaluate_dataset(sample_dataset, kile_predictions, {})
     assert evaluation_dict == {"kile": pytest.approx(kile), "lir": 0.0}
 
@@ -129,38 +138,39 @@ def test_evaluate_dataset_lir_missing_and_wrong_predictions(
                 line_item_id=new_line_item_id,
             )
 
+    # After sorting the predictions by score and prediction id, we get the following list:
+    #       False, True, False, False, True, True, True, ..., True, False, False
+    # The best precision is achieved for the highest recall which means it will be used also for
+    # the smaller recall values (check average_precison.py for details).
+
     fields = len(sample_dataset[sample_dataset_docid].annotation.li_fields)
-    precision = (fields + 1 - 5) / (fields + 1)
-    recall = (fields - 4) / fields
-    lir = precision * recall
+    true_positives = fields - 4
+    recall = true_positives / fields
+    # The 2 extra predictions are ignored as they are last.
+    precision = true_positives / (fields - 1)
+    lir = recall * precision
     evaluation_dict = evaluate_dataset(sample_dataset, {}, lir_predictions)
     assert evaluation_dict == {"kile": 0.0, "lir": pytest.approx(lir)}
 
 
-def test_get_score_matched_pairs() -> None:
+def test_get_sort_key_matched_pairs() -> None:
     bbox = BBox(0, 0, 1, 1)
     f_gold = Field(bbox=bbox, page=0)
     field_matching = FieldMatching(
-        matches=[
-            MatchedPair(pred=Field(bbox=bbox, page=0, score=1), gold=f_gold),
-            MatchedPair(pred=Field(bbox=bbox, page=0, score=0.5), gold=f_gold),
+        ordered_predictions_with_match=[
+            (Field(bbox=bbox, page=0, score=1), f_gold),
+            (Field(bbox=bbox, page=0, score=0.4), f_gold),
+            (Field(bbox=bbox, page=0, score=0.4), None),
+            (Field(bbox=bbox, page=0, score=0.8), None),
         ],
-        false_positives=[Field(bbox=bbox, page=0, score=0.4), Field(bbox=bbox, page=0, score=0.8)],
         false_negatives=[f_gold],
     )
 
-    actual_score_matched_pairs = list(_get_score_matched_pairs(field_matching))
-    expected_score_matched_pairs = [(1, True), (0.5, True), (0.4, False), (0.8, False)]
-    assert actual_score_matched_pairs == expected_score_matched_pairs
-
-
-def test_get_score_matched_pairs_none_scores() -> None:
-    f_no_score = Field(bbox=BBox(0, 0, 1, 1), page=0)
-    field_matching = FieldMatching(
-        matches=[MatchedPair(pred=f_no_score, gold=f_no_score)],
-        false_positives=[f_no_score, f_no_score],
-        false_negatives=[f_no_score],
-    )
-    actual_score_matched_pairs = list(_get_score_matched_pairs(field_matching))
-    expected_score_matched_pairs = [(1, True), (1, False), (1, False)]
+    actual_score_matched_pairs = _get_sort_key_matched_pairs(field_matching, "mock_docid")
+    expected_score_matched_pairs = [
+        ((-1, 0, mock.ANY), True),
+        ((-0.4, 1, mock.ANY), True),
+        ((-0.4, 2, mock.ANY), False),
+        ((-0.8, 3, mock.ANY), False),
+    ]
     assert actual_score_matched_pairs == expected_score_matched_pairs

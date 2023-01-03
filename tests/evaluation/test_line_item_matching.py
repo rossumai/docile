@@ -89,3 +89,13 @@ def test_get_lir_matches() -> None:
     }
     assert set(field_matching.false_positives) == {predictions[1], predictions[2], predictions[4]}
     assert set(field_matching.false_negatives) == {annotations[1], annotations[2]}
+
+    assert field_matching.ordered_predictions_with_match == [
+        (predictions[0], annotations[0]),
+        (predictions[1], None),
+        (predictions[2], None),
+        (predictions[3], annotations[3]),
+        (predictions[4], None),
+        (predictions[5], annotations[4]),
+        (predictions[6], annotations[5]),
+    ]

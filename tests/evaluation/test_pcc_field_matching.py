@@ -1,7 +1,7 @@
 import pytest
 
 from docile.dataset import BBox, Field
-from docile.evaluation import PCC, PCCSet
+from docile.evaluation.pcc import PCC, PCCSet
 from docile.evaluation.pcc_field_matching import get_matches, pccs_iou
 
 
@@ -37,9 +37,9 @@ def test_get_matches() -> None:
 
     annotations = [
         Field(fieldtype="full_match", text="ab", bbox=BBox(0.4, 0.4, 0.7, 0.7), page=0),
+        Field(fieldtype="no_match", text="ab", bbox=BBox(0, 0, 0.3, 0.2), page=0),
         Field(fieldtype="full_match", text="ab", bbox=BBox(0.4, 0.4, 0.7, 0.7), page=1),
         Field(fieldtype="partial_match", text="ab", bbox=BBox(0.05, 0.05, 0.3, 0.2), page=0),
-        Field(fieldtype="no_match", text="ab", bbox=BBox(0, 0, 0.3, 0.2), page=0),
         Field(fieldtype="no_match", text="ab", bbox=BBox(0, 0, 1.0, 1.0), page=0),
     ]
     predictions = [
@@ -58,6 +58,14 @@ def test_get_matches() -> None:
     )
     assert len(matching.false_positives) == 4
     assert len(matching.false_negatives) == 3
+    assert matching.ordered_predictions_with_match == [
+        (predictions[0], annotations[0]),
+        (predictions[1], annotations[2]),
+        (predictions[2], None),
+        (predictions[3], None),
+        (predictions[4], None),
+        (predictions[5], None),
+    ]
 
     matching_iou05 = get_matches(
         predictions=predictions, annotations=annotations, pcc_set=pcc_set, iou_threshold=0.5
@@ -70,3 +78,11 @@ def test_get_matches() -> None:
     )
     assert len(matching_iou05.false_positives) == 3
     assert len(matching_iou05.false_negatives) == 2
+    assert matching_iou05.ordered_predictions_with_match == [
+        (predictions[0], annotations[0]),
+        (predictions[1], annotations[2]),
+        (predictions[2], annotations[3]),
+        (predictions[3], None),
+        (predictions[4], None),
+        (predictions[5], None),
+    ]
