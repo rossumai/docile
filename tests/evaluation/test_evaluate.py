@@ -1,13 +1,129 @@
 import random
 from copy import deepcopy
 from dataclasses import replace
+from typing import Tuple
 from unittest import mock
 
 import pytest
 
 from docile.dataset import BBox, Dataset, Field
-from docile.evaluation.evaluate import _get_sort_key_matched_pairs, evaluate_dataset
+from docile.evaluation.evaluate import (
+    EvaluationReport,
+    _get_prediction_sort_key,
+    _sort_predictions,
+    _validate_predictions,
+    compute_metrics,
+    evaluate_dataset,
+    filter_field_matching,
+)
 from docile.evaluation.pcc_field_matching import FieldMatching
+
+
+@pytest.fixture
+def mock_evaluation_report() -> EvaluationReport:
+    field1 = Field(BBox(0, 0, 1, 1), page=0, score=1, fieldtype="f1")
+    field05 = Field(BBox(0, 0, 1, 1), page=0, score=0.5, fieldtype="f05")
+    evaluation_report = EvaluationReport(
+        task_to_docid_to_matching={
+            "kile": {
+                "a": FieldMatching(
+                    ordered_predictions_with_match=[(field1, field1), (field1, None)],
+                    false_negatives=[field1],
+                ),
+                "b": FieldMatching.empty([field05, field05], [field1]),
+            },
+            "lir": {
+                "a": FieldMatching.empty([], [field1]),
+                "b": FieldMatching(
+                    ordered_predictions_with_match=[
+                        (field1, field1),
+                        (field05, None),
+                        (field05, field05),
+                    ],
+                    false_negatives=[],
+                ),
+            },
+        },
+        dataset_name="mock-dataset",
+        iou_threshold=1.0,
+    )
+    return evaluation_report
+
+
+def test_evaluation_report_get_primary_metric(mock_evaluation_report: EvaluationReport) -> None:
+    # AP = 0.5 for KILE because recall is 1/3 and the first prediction is the correct one.
+    assert mock_evaluation_report.get_primary_metric("kile") == 1 / 3
+    # f1 = 2/3 for LIR because both precision and recall are 2/3
+    assert mock_evaluation_report.get_primary_metric("lir") == 2 / 3
+
+
+def test_evaluation_report_get_metrics(mock_evaluation_report: EvaluationReport) -> None:
+    assert mock_evaluation_report.get_metrics("kile") == {
+        "TP": 1,
+        "FP": 3,
+        "FN": 2,
+        "precision": 1 / 4,
+        "recall": 1 / 3,
+        "f1": pytest.approx(2 / 7),
+        "AP": 1 / 3,
+    }
+    assert mock_evaluation_report.get_metrics("kile", fieldtype="f1") == {
+        "TP": 1,
+        "FP": 1,
+        "FN": 2,
+        "precision": 1 / 2,
+        "recall": 1 / 3,
+        "f1": pytest.approx(2 / 5),
+        "AP": 1 / 3,
+    }
+    assert mock_evaluation_report.get_metrics("lir", fieldtype="f05", docid="b") == {
+        "TP": 1,
+        "FP": 1,
+        "FN": 0,
+        "precision": 1 / 2,
+        "recall": 1,
+        "f1": pytest.approx(2 / 3),
+        "AP": 1 / 2,
+    }
+
+
+def test_evaluation_report_print_report(mock_evaluation_report: EvaluationReport) -> None:
+    assert (
+        mock_evaluation_report.print_report(include_fieldtypes=False, floatfmt=".2f")
+        == """\
+Evaluation report for mock-dataset
+==================================
+KILE
+----
+Primary metric (AP): 0.3333333333333333
+
+| fieldtype            |   AP |   f1 |   precision |   recall |   TP |   FP |   FN |
+|----------------------|------|------|-------------|----------|------|------|------|
+| **-> micro average** | 0.33 | 0.29 |        0.25 |     0.33 |    1 |    3 |    2 |
+
+LIR
+---
+Primary metric (f1): 0.6666666666666666
+
+| fieldtype            |   AP |   f1 |   precision |   recall |   TP |   FP |   FN |
+|----------------------|------|------|-------------|----------|------|------|------|
+| **-> micro average** | 0.56 | 0.67 |        0.67 |     0.67 |    2 |    1 |    1 |
+"""
+    )
+
+
+def _assert_metrics_at_least(
+    evaluation_report: EvaluationReport,
+    minimum_value: float,
+    tasks: Tuple[str, ...] = ("kile", "lir"),
+    eval_same_text: Tuple[bool, ...] = (False, True),
+    check_metric_names: Tuple[str, ...] = ("AP", "f1", "precision", "recall"),
+) -> None:
+    for task in tasks:
+        for same_text in eval_same_text:
+            metrics = evaluation_report.get_metrics(task=task, same_text=same_text)
+            for metric_name in check_metric_names:
+                assert metrics[metric_name] == minimum_value
 
 
 def test_evaluate_dataset_perfect_predictions(
@@ -19,8 +135,8 @@ def test_evaluate_dataset_perfect_predictions(
     lir_predictions = {
         sample_dataset_docid: sample_dataset[sample_dataset_docid].annotation.li_fields
     }
-    evaluation_dict = evaluate_dataset(sample_dataset, kile_predictions, lir_predictions)
-    assert evaluation_dict == {"kile": 1.0, "lir": 1.0}
+    evaluation_report = evaluate_dataset(sample_dataset, kile_predictions, lir_predictions)
+    _assert_metrics_at_least(evaluation_report, 1.0)
 
 
 def test_evaluate_dataset_perfect_predictions_with_perturbations(
@@ -47,10 +163,10 @@ def test_evaluate_dataset_perfect_predictions_with_perturbations(
             for field in sample_dataset[sample_dataset_docid].annotation.li_fields
         ]
     }
-    evaluation_dict = evaluate_dataset(
+    evaluation_report = evaluate_dataset(
         sample_dataset, kile_predictions, lir_predictions, iou_threshold=0.9
     )
-    assert evaluation_dict == {"kile": 1.0, "lir": 1.0}
+    _assert_metrics_at_least(evaluation_report, 1.0)
 
 
 def test_evaluate_dataset_kile_missing_and_wrong_predictions(
@@ -78,19 +194,34 @@ def test_evaluate_dataset_kile_missing_and_wrong_predictions(
         fieldtype="mock_fieldtype",
     )
 
+    fields = len(sample_dataset[sample_dataset_docid].annotation.fields)
+    false_negatives = 4
+    true_positives = fields - false_negatives
+    false_positives = 3
+    recall = true_positives / fields
+    precision = true_positives / (true_positives + false_positives)
+    f1 = 2 * precision * recall / (precision + recall)
+
+    # AP computation:
     # After sorting the predictions by score and prediction id, we get the following list:
     #       False, False, True, True, True, ..., True, False
     # The best precision is achieved for the highest recall which means it will be used also for
     # the smaller recall values (check average_precison.py for details).
 
-    fields = len(sample_dataset[sample_dataset_docid].annotation.fields)
-    true_positives = fields - 4
-    recall = true_positives / fields
     # the prediction with score < 1 does not affect the result
-    precision = true_positives / (fields - 2)
-    kile = recall * precision
-    evaluation_dict = evaluate_dataset(sample_dataset, kile_predictions, {})
-    assert evaluation_dict == {"kile": pytest.approx(kile), "lir": 0.0}
+    ap_precision = true_positives / (true_positives + false_positives - 1)
+    ap = recall * ap_precision
+
+    evaluation_report = evaluate_dataset(sample_dataset, kile_predictions, {})
+    assert evaluation_report.get_metrics("kile") == {
+        "AP": ap,
+        "f1": f1,
+        "precision": precision,
+        "recall": recall,
+        "TP": true_positives,
+        "FP": false_positives,
+        "FN": false_negatives,
+    }
 
 
 def test_evaluate_dataset_lir_missing_and_wrong_predictions(
@@ -138,39 +269,206 @@ def test_evaluate_dataset_lir_missing_and_wrong_predictions(
                 line_item_id=new_line_item_id,
             )
 
+    fields = len(sample_dataset[sample_dataset_docid].annotation.li_fields)
+    false_negatives = 4
+    true_positives = fields - false_negatives
+    false_positives = 5
+    recall = true_positives / fields
+    precision = true_positives / (true_positives + false_positives)
+    f1 = 2 * precision * recall / (precision + recall)
+
+    # AP computation:
     # After sorting the predictions by score and prediction id, we get the following list:
     #       False, True, False, False, True, True, True, ..., True, False, False
     # The best precision is achieved for the highest recall which means it will be used also for
     # the smaller recall values (check average_precison.py for details).
 
-    fields = len(sample_dataset[sample_dataset_docid].annotation.li_fields)
-    true_positives = fields - 4
-    recall = true_positives / fields
     # The 2 extra predictions are ignored as they are last.
-    precision = true_positives / (fields - 1)
-    lir = recall * precision
-    evaluation_dict = evaluate_dataset(sample_dataset, {}, lir_predictions)
-    assert evaluation_dict == {"kile": 0.0, "lir": pytest.approx(lir)}
+    ap_precision = true_positives / (true_positives + false_positives - 2)
+    ap = recall * ap_precision
+
+    evaluation_report = evaluate_dataset(sample_dataset, {}, lir_predictions)
+    assert evaluation_report.get_metrics("lir") == {
+        "AP": pytest.approx(ap),
+        "f1": f1,
+        "precision": precision,
+        "recall": recall,
+        "TP": true_positives,
+        "FP": false_positives,
+        "FN": false_negatives,
+    }
 
 
-def test_get_sort_key_matched_pairs() -> None:
+def test_compute_metrics() -> None:
+    field1 = Field(BBox(0, 0, 1, 1), page=0, score=1)
+    field05 = Field(BBox(0, 0, 1, 1), page=0, score=0.5)
+    docid_to_field_matching = {
+        "a": FieldMatching(
+            ordered_predictions_with_match=[
+                (field05, None),
+                (field1, field1),
+                (field05, field05),
+                (field1, None),
+            ],
+            false_negatives=[field1],
+        ),
+        "b": FieldMatching(
+            ordered_predictions_with_match=[(field1, field1)],
+            false_negatives=[],
+        ),
+    }
+    assert compute_metrics(docid_to_field_matching) == {
+        "TP": 3,
+        "FP": 2,
+        "FN": 1,
+        "precision": 3 / 5,
+        "recall": 3 / 4,
+        "f1": pytest.approx(2 / 3),
+        # sorted predictions matched: [True, True, False, False, True]
+        # (recall, precision) pairs: [(0.25, 1), (0.5, 1), (0.75, 0.6)]
+        "AP": 0.5 * 1 + 0.25 * 0.6,
+    }
+
+
+def test_filter_field_matching() -> None:
     bbox = BBox(0, 0, 1, 1)
-    f_gold = Field(bbox=bbox, page=0)
+    field_f1_no_text = Field(bbox, page=0, fieldtype="f1")
+    field_f1_text_a = Field(bbox, page=0, fieldtype="f1", text="a")
+    field_f1_text_b = Field(bbox, page=0, fieldtype="f1", text="b")
+    field_f2 = Field(bbox, page=0, fieldtype="f2", text="x")
     field_matching = FieldMatching(
         ordered_predictions_with_match=[
-            (Field(bbox=bbox, page=0, score=1), f_gold),
-            (Field(bbox=bbox, page=0, score=0.4), f_gold),
-            (Field(bbox=bbox, page=0, score=0.4), None),
-            (Field(bbox=bbox, page=0, score=0.8), None),
+            (field_f1_no_text, None),
+            (field_f1_no_text, field_f1_text_a),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, field_f1_text_a),
+            (field_f2, field_f2),
         ],
-        false_negatives=[f_gold],
+        false_negatives=[field_f2, field_f1_text_b],
     )
 
-    actual_score_matched_pairs = _get_sort_key_matched_pairs(field_matching, "mock_docid")
-    expected_score_matched_pairs = [
-        ((-1, 0, mock.ANY), True),
-        ((-0.4, 1, mock.ANY), True),
-        ((-0.4, 2, mock.ANY), False),
-        ((-0.8, 3, mock.ANY), False),
+    assert filter_field_matching(field_matching) == field_matching
+    assert filter_field_matching(field_matching, same_text=True) == FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, None),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, None),
+            (field_f2, field_f2),
+        ],
+        false_negatives=[field_f2, field_f1_text_b, field_f1_text_a, field_f1_text_a],
+    )
+    assert filter_field_matching(field_matching, fieldtype="f1") == FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, field_f1_text_a),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, field_f1_text_a),
+        ],
+        false_negatives=[field_f1_text_b],
+    )
+    assert filter_field_matching(field_matching, same_text=True, fieldtype="f1") == FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, None),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, None),
+        ],
+        false_negatives=[field_f1_text_b, field_f1_text_a, field_f1_text_a],
+    )
+
+
+def test_validate_predictions(sample_dataset: Dataset, sample_dataset_docid: str) -> None:
+    bbox = BBox(0, 0, 1, 1)
+    with pytest.raises(
+        ValueError,
+        match="You need to provide at least one prediction for at least one of the tasks.",
+    ):
+        _validate_predictions(sample_dataset, {}, {})
+
+    missing_fieldtype = {sample_dataset_docid: [Field(bbox=bbox, page=0)]}
+    with pytest.raises(ValueError, match="Some prediction is missing 'fieldtype'."):
+        _validate_predictions(sample_dataset, missing_fieldtype, {})
+
+    extra_line_item_id = {
+        sample_dataset_docid: [Field(bbox=bbox, page=0, fieldtype="f", line_item_id=8)]
+    }
+    _validate_predictions(sample_dataset, {}, extra_line_item_id)
+    with pytest.raises(ValueError, match="Some KILE prediction has extra 'line_item_id'."):
+        _validate_predictions(sample_dataset, extra_line_item_id, {})
+
+    missing_line_item_id = {sample_dataset_docid: [Field(bbox=bbox, page=0, fieldtype="f")]}
+    _validate_predictions(sample_dataset, missing_line_item_id, {})
+    with pytest.raises(ValueError, match="Some LIR prediction is missing 'line_item_id'."):
+        _validate_predictions(sample_dataset, {}, missing_line_item_id)
+
+    only_part_with_scores = {
+        sample_dataset_docid: [
+            Field(bbox=bbox, page=0, fieldtype="f1"),
+            Field(bbox=bbox, page=0, fieldtype="f2", score=1.0),
+        ]
+    }
+    with pytest.raises(ValueError, match="Either all or no predictions need to have scores"):
+        _validate_predictions(sample_dataset, only_part_with_scores, {})
+
+
+def test_sort_predictions() -> None:
+    bbox = BBox(0, 0, 1, 1)
+    f_gold = Field(bbox=bbox, page=0)
+    predictions_doc_a = [
+        Field(bbox=bbox, text="a", page=0, score=0.4),
+        Field(bbox=bbox, text="a", page=0, score=1),
+        Field(bbox=bbox, text="a", page=0, score=0.8),
+        Field(bbox=bbox, text="a", page=0, score=0.4),
     ]
-    assert actual_score_matched_pairs == expected_score_matched_pairs
+    predictions_doc_b = [
+        Field(bbox=bbox, text="b", page=0, score=0.8),
+        Field(bbox=bbox, text="b", page=0, score=0.4),
+        Field(bbox=bbox, text="b", page=0, score=0.5),
+    ]
+    docid_to_matching = {
+        "a": FieldMatching(
+            ordered_predictions_with_match=[
+                (predictions_doc_a[0], f_gold),
+                (predictions_doc_a[1], f_gold),
+                (predictions_doc_a[2], f_gold),
+                (predictions_doc_a[3], f_gold),
+            ],
+            false_negatives=[f_gold],
+        ),
+        "b": FieldMatching(
+            ordered_predictions_with_match=[
+                (predictions_doc_b[0], None),
+                (predictions_doc_b[1], None),
+                (predictions_doc_b[2], None),
+            ],
+            false_negatives=[],
+        ),
+    }
+
+    actual_sorted_predictions = _sort_predictions(docid_to_matching)
+    expected_sorted_predictions = [
+        True,  # a[1], score 1
+        False,  # b[0], score 0.8, pred_i=0
+        True,  # a[2], score 0.8, pred_i=2
+        False,  # b[2], score 0.5
+        True,  # a[0], score 0.4, pred_i=0
+        False,  # b[1], score 0.4, pred_i=1
+        True,  # a[3], score 0.4, pred_i=3
+    ]
+    assert actual_sorted_predictions == expected_sorted_predictions
+
+
+def test_get_prediction_sort_key() -> None:
+    a0 = _get_prediction_sort_key(1.0, 0, "a")
+    b0 = _get_prediction_sort_key(1.0, 0, "b")
+    a2 = _get_prediction_sort_key(0.4, 2, "a")
+    b2 = _get_prediction_sort_key(0.4, 2, "b")
+    assert a0 == (-1, 0, mock.ANY)
+    assert b0 == (-1, 0, mock.ANY)
+    assert a2 == (-0.4, 2, mock.ANY)
+    assert b2 == (-0.4, 2, mock.ANY)
+    # The following two pairs have the same score and prediction_i but are in different order for
+    # the two docs. This is thanks to the hashing of docid with prediction_i.
+    assert b0 < a0
+    assert a2 < b2

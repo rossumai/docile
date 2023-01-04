@@ -1,3 +1,4 @@
+import itertools
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import List, Optional, Sequence, Tuple
@@ -44,6 +45,19 @@ class FieldMatching:
     @property
     def false_positives(self) -> Sequence[Field]:
         return [pred for pred, gold in self.ordered_predictions_with_match if gold is None]
+
+    @property
+    def predictions(self) -> Sequence[Field]:
+        return [pred for pred, _gold in self.ordered_predictions_with_match]
+
+    @property
+    def annotations(self) -> Sequence[Field]:
+        return list(
+            itertools.chain(
+                (gold for _pred, gold in self.ordered_predictions_with_match if gold is not None),
+                self.false_negatives,
+            )
+        )
 
     @classmethod
     def empty(cls, predictions: Sequence[Field], annotations: Sequence[Field]) -> "FieldMatching":

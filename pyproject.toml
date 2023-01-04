@@ -21,6 +21,7 @@ pdf2image = "^1.16.0"
 pillow = "^9.2.0"
 networkx = {extras = ["default"], version = "^2.8.8"}
 opencv-python = "^4.6.0.66"
+tabulate = "^0.9.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"
