@@ -11,12 +11,13 @@ from docile.dataset.paths import DataPaths
 class Dataset:
     """Structure representing a dataset, i.e., a collection of documents."""
 
-    def __init__(self, docids: Iterable[str], dataset_path: Path):
+    def __init__(self, docids: Iterable[str], dataset_path: Path, split_name: str):
         self.docids = list(docids)
         self.dataset_path = dataset_path
+        self.split_name = split_name
         self.docs = {
             docid: Document(docid, dataset_path)
-            for docid in tqdm(self.docids, desc="Loading documents")
+            for docid in tqdm(self.docids, desc=f"Loading documents for {self.name}")
         }
         self.doc2index = {d: i for (i, d) in enumerate(docids)}
         self.index2doc = {i: d for (i, d) in enumerate(docids)}
@@ -25,7 +26,11 @@ class Dataset:
     def from_file(cls, split_name: str, dataset_path: Path) -> "Dataset":
         path = DataPaths(dataset_path).dataset_index_path(split_name)
         docids = json.loads(path.read_text())
-        return cls(docids, dataset_path)
+        return cls(docids, dataset_path, split_name)
+
+    @property
+    def name(self) -> str:
+        return f"{self.dataset_path.name}/{self.split_name}"
 
     def __getitem__(self, id_or_pos: Union[str, int]) -> Document:
         if isinstance(id_or_pos, str):

@@ -76,7 +76,8 @@ repos:
           pytest-stub,
           types-dataclasses,
           types-Pillow,
-          types-setuptools
+          types-setuptools,
+          types-tabulate
         ]
         args: []
         language: python

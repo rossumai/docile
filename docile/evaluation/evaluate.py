@@ -1,10 +1,13 @@
+import hashlib
 import logging
 import operator
-from typing import Dict, Mapping, Optional, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
+from tabulate import tabulate
 from tqdm import tqdm
 
-from docile.dataset import Dataset, Field
+from docile.dataset import KILE_FIELDTYPES, LIR_FIELDYPES, Dataset, Field
 from docile.evaluation.average_precision import compute_average_precision
 from docile.evaluation.line_item_matching import get_lir_matches
 from docile.evaluation.pcc import get_document_pccs
@@ -13,16 +16,146 @@ from docile.evaluation.pcc_field_matching import FieldMatching, get_matches
 logger = logging.getLogger(__name__)
 
 
-PredictionSortKey = Tuple[float, int, int]
+PredictionSortKey = Tuple[float, int, str]
+
+TASK_TO_PRIMARY_METRIC_NAME = {"kile": "AP", "lir": "f1"}
+METRIC_NAMES = ["AP", "f1", "precision", "recall", "TP", "FP", "FN"]
+
+
+@dataclass(frozen=True)
+class EvaluationReport:
+    """
+    Class with the evaluation result.
+
+    It stores the matching between predictions and annotations which can be used to (quickly)
+    compute different metrics. The following options are supported:
+    * Unmatch predictions whose text differs from the ground truth text (in the primary metric
+      this is not required).
+    * Filter predictions and annotations to a specific fieldtype.
+    * Compute metrics for a single document
+    """
+
+    task_to_docid_to_matching: Mapping[str, Mapping[str, FieldMatching]]
+    dataset_name: str  # Name of evaluated Dataset
+    iou_threshold: float  # which value was used to generate this report
+
+    def get_primary_metric(self, task: str) -> float:
+        """Return the primary metric used for DocILE'23 benchmark competition."""
+        metric = TASK_TO_PRIMARY_METRIC_NAME[task]
+        return self.get_metrics(task)[metric]
+
+    def get_metrics(
+        self, task: str, same_text: bool = False, fieldtype: str = "", docid: str = ""
+    ) -> Dict[str, float]:
+        """Get metrics based on several filters.
+
+        Parameters
+        ----------
+        task
+            Task name for which to return the metrics, should be "kile" or "lir".
+        same_text
+            Require predictions to have exactly the same text as the ground truth in the
+            annotation. Note that matching is done based on the location only and this is then just
+            used to unmatch predictions with wrong text. This means it can happen that a correct
+            prediction is not counted as true positive if there is another prediction in the same
+            location with wrong text that was matched to the annotation first.
+        fieldtype
+            If non-empty, restrict the predictions and annotations to this fieldtype.
+        docid
+            If non-empty, evaluate only on the single document.
+
+        Returns
+        -------
+        Dictionary from metric name to the metric value.
+        """
+        docid_to_matching = self.task_to_docid_to_matching[task]
+        if docid != "":
+            docid_to_matching = {docid: docid_to_matching[docid]}
+        docid_to_filtered_matching = {
+            docid: filter_field_matching(matching, same_text=same_text, fieldtype=fieldtype)
+            for docid, matching in docid_to_matching.items()
+        }
+        return compute_metrics(docid_to_filtered_matching)
+
+    def print_report(
+        self,
+        docid: str = "",
+        include_fieldtypes: bool = True,
+        include_same_text: bool = False,
+        tablefmt: str = "github",
+        floatfmt: str = ".3f",
+    ) -> str:
+        """
+        Return a string with a detailed evaluation report.
+
+        Parameters
+        ----------
+        docid
+            Only restrict to this single document.
+        include_fieldtypes
+            Also show metrics for each fieldtype separately.
+        include_same_text
+            Also show results if exact text match is required.
+        tablefmt
+            Format in which the table should be printed. With 'github' (default) the whole report
+            can be stored as a markdown file. You can also use 'latex' to generate a LaTeX table
+            definition and other options as defined in the `tabulate` package.
+        floatfmt
+            Formatting option for floats in tables. Check `tabulate` package for details.
+
+        Returns
+        -------
+        Multi-line string with the human-readable report.
+        """
+        if docid == "":
+            report = [f"Evaluation report for {self.dataset_name}"]
+        else:
+            report = [f"Evaluation report for '{docid}' from {self.dataset_name}"]
+
+        iou_threshold_str = ""
+        if self.iou_threshold < 1:
+            iou_threshold_str = f" [IoU threshold for PCCs = {self.iou_threshold}]"
+        report[-1] += iou_threshold_str
+        report.append("=" * len(report[-1]))
+
+        for task in sorted(self.task_to_docid_to_matching.keys()):
+            same_text_choices = [False, True] if include_same_text else [False]
+            for same_text in same_text_choices:
+                task_name = task.upper()
+                if same_text:
+                    task_name += " (with text comparison)"
+                report.append(task_name)
+                report.append("-" * len(report[-1]))
+                summary_metrics = self.get_metrics(task=task, same_text=same_text, docid=docid)
+                primary_metric_name = TASK_TO_PRIMARY_METRIC_NAME[task]
+                primary_metric = summary_metrics[primary_metric_name]
+                report.append(f"Primary metric ({primary_metric_name}): {primary_metric}")
+                report.append("")
+
+                assert set(summary_metrics.keys()) == set(METRIC_NAMES)
+                headers = ["fieldtype"] + METRIC_NAMES
+                rows = [["**-> micro average**"] + [summary_metrics[m] for m in METRIC_NAMES]]
+
+                if include_fieldtypes:
+                    fieldtypes = KILE_FIELDTYPES if task == "kile" else LIR_FIELDYPES
+                    for fieldtype in fieldtypes:
+                        metrics = self.get_metrics(
+                            task=task, same_text=same_text, fieldtype=fieldtype, docid=docid
+                        )
+                        rows.append([fieldtype] + [metrics[m] for m in METRIC_NAMES])
+
+                table = tabulate(rows, headers, tablefmt=tablefmt, floatfmt=floatfmt)
+                report.extend(table.splitlines())
+                report.append("")
+        return "\n".join(report)
 
 
 def evaluate_dataset(
     dataset: Dataset,
     docid_to_kile_predictions: Mapping[str, Sequence[Field]],
     docid_to_lir_predictions: Mapping[str, Sequence[Field]],
-    with_text: bool = False,
     iou_threshold: float = 1.0,
-) -> Dict[str, float]:
+) -> EvaluationReport:
     """
     Evaluate the dataset on KILE and LIR using the given predictions.
 
@@ -36,23 +169,162 @@ def evaluate_dataset(
         Mapping from doc ids (in the 'dataset') to KILE predictions.
     docid_to_lir_predictions
         Mapping from doc ids (in the 'dataset') to LIR predictions.
-    with_text
-        If True, evaluate (also) by comparing the read-out text.
     iou_threshold
         Necessary 'intersection / union' to accept a pair of fields as a match. The official
         evaluation uses threshold 1.0 but lower thresholds can be used for debugging.
 
     Returns
     -------
-    Dictionary from metric name to the float value.
+    Evaluation report containing the matched predictions. Use its `print_metrics()` method to get
+    the metrics.
     """
-    if with_text:
-        raise NotImplementedError("Comparing the read-out text is not implemented yet.")
+    _validate_predictions(dataset, docid_to_kile_predictions, docid_to_lir_predictions)
 
+    tasks = [
+        task
+        for task, docid_to_predictions in [
+            ("kile", docid_to_kile_predictions),
+            ("lir", docid_to_lir_predictions),
+        ]
+        if sum(len(predictions) for predictions in docid_to_predictions.values()) > 0
+    ]
+    task_to_docid_to_matching = {task: {} for task in tasks}
+    for document in tqdm(dataset, desc="Run matching for documents"):
+        pcc_set = get_document_pccs(document)
+
+        if "kile" in tasks:
+            kile_matching = get_matches(
+                predictions=docid_to_kile_predictions.get(document.docid, []),
+                annotations=document.annotation.fields,
+                pcc_set=pcc_set,
+                iou_threshold=iou_threshold,
+            )
+            task_to_docid_to_matching["kile"][document.docid] = kile_matching
+
+        if "lir" in tasks:
+            lir_matching, _line_item_matching = get_lir_matches(
+                predictions=docid_to_lir_predictions.get(document.docid, []),
+                annotations=document.annotation.li_fields,
+                pcc_set=pcc_set,
+                iou_threshold=iou_threshold,
+            )
+            task_to_docid_to_matching["lir"][document.docid] = lir_matching
+
+    return EvaluationReport(
+        task_to_docid_to_matching=task_to_docid_to_matching,
+        dataset_name=dataset.name,
+        iou_threshold=iou_threshold,
+    )
+
+
+def compute_metrics(
+    docid_to_matching: Mapping[str, FieldMatching]
+) -> Dict[str, Union[int, float]]:
+    """Compute different metrics for the given matchings between predictions and annotations."""
+    total_predictions = sum(len(matching.predictions) for matching in docid_to_matching.values())
+    total_annotations = sum(len(matching.annotations) for matching in docid_to_matching.values())
+
+    true_positives = sum(len(matching.matches) for matching in docid_to_matching.values())
+    false_positives = sum(len(matching.false_positives) for matching in docid_to_matching.values())
+    false_negatives = sum(len(matching.false_negatives) for matching in docid_to_matching.values())
+
+    precision = true_positives / total_predictions if total_predictions else 0.0
+    recall = true_positives / total_annotations if total_annotations else 0.0
+    if precision + recall == 0:
+        f1 = 0.0
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
+
+    ap = compute_average_precision(
+        sorted_predictions_matched=_sort_predictions(docid_to_matching),
+        total_annotations=total_annotations,
+    )
+    return {
+        "AP": ap,
+        "f1": f1,
+        "precision": precision,
+        "recall": recall,
+        "TP": true_positives,
+        "FP": false_positives,
+        "FN": false_negatives,
+    }
+
+
+def filter_field_matching(
+    field_matching: FieldMatching, same_text: bool = False, fieldtype: str = ""
+) -> FieldMatching:
+    """
+    Filter matching based on the given options.
+
+    Parameters
+    ----------
+    field_matching
+        Matching between predictions nad annotations for one document.
+    same_text
+        If true, unmatch predictions whose text does not exactly match the ground truth in the
+        matched annotation.
+    fieldtype
+        If nonempty only keep predictions and annotations with the specified fieldtype.
+    """
+
+    def is_fieldtype_ok(ft: Optional[str]) -> bool:
+        return fieldtype == "" or ft == fieldtype
+
+    new_false_negatives = [
+        gold for gold in field_matching.false_negatives if is_fieldtype_ok(gold.fieldtype)
+    ]
+    new_ordered_predictions_with_match: List[Tuple[Field, Optional[Field]]] = []
+    for pred, gold in field_matching.ordered_predictions_with_match:
+        if not is_fieldtype_ok(pred.fieldtype):
+            continue
+        if gold is not None and same_text and pred.text != gold.text:
+            new_false_negatives.append(gold)
+            new_ordered_predictions_with_match.append((pred, None))
+        else:
+            new_ordered_predictions_with_match.append((pred, gold))
+    return FieldMatching(new_ordered_predictions_with_match, new_false_negatives)
+
+
+def _validate_predictions(
+    dataset: Dataset,
+    docid_to_kile_predictions: Mapping[str, Sequence[Field]],
+    docid_to_lir_predictions: Mapping[str, Sequence[Field]],
+) -> None:
+    """Run basic checks on the provided predictions."""
     metric_to_predictions = {
         "kile": docid_to_kile_predictions,
         "lir": docid_to_lir_predictions,
     }
+    if all(
+        0 == sum(len(predictions) for predictions in docid_to_predictions.values())
+        for docid_to_predictions in metric_to_predictions.values()
+    ):
+        raise ValueError(
+            "You need to provide at least one prediction for at least one of the tasks."
+        )
+
+    if any(
+        pred.fieldtype is None
+        for docid_to_predictions in metric_to_predictions.values()
+        for predictions in docid_to_predictions.values()
+        for pred in predictions
+    ):
+        raise ValueError("Some prediction is missing 'fieldtype'.")
+
+    if any(
+        pred.line_item_id is not None
+        for predictions in docid_to_kile_predictions.values()
+        for pred in predictions
+    ):
+        raise ValueError("Some KILE prediction has extra 'line_item_id'.")
+
+    if any(
+        pred.line_item_id is None
+        for predictions in docid_to_lir_predictions.values()
+        for pred in predictions
+    ):
+        raise ValueError("Some LIR prediction is missing 'line_item_id'.")
+
     for metric, docid_to_predictions in metric_to_predictions.items():
         have_scores = sum(
             sum(1 for f in fields if f.score is not None)
@@ -75,57 +347,29 @@ def evaluate_dataset(
                 f"{metric}: Did not find any predictions for {missing}/{len(dataset)} documents"
             )
 
-    metric_to_sort_key_matched_pairs = {"kile": [], "lir": []}
-    if with_text:
-        metric_to_sort_key_matched_pairs.update({"kile_with_text": [], "lir_with_text": []})
 
-    metric_to_total_annotations = {metric: 0 for metric in metric_to_sort_key_matched_pairs.keys()}
+def _sort_predictions(docid_to_matching: Mapping[str, FieldMatching]) -> Sequence[bool]:
+    """
+    Collect and sort predictions from the given field matchings.
 
-    for document in tqdm(dataset, desc="Run matching for documents"):
-        pcc_set = get_document_pccs(document)
-
-        kile_annotations = document.annotation.fields
-        kile_predictions = docid_to_kile_predictions.get(document.docid, [])
-        lir_annotations = document.annotation.li_fields
-        lir_predictions = docid_to_lir_predictions.get(document.docid, [])
-
-        # TODO: pass use_text to matching
-        for use_text in [False, True] if with_text else [False]:
-            metric = "kile_with_text" if use_text else "kile"
-            kile_matching = get_matches(
-                predictions=kile_predictions,
-                annotations=kile_annotations,
-                pcc_set=pcc_set,
-                iou_threshold=iou_threshold,
+    Returns
+    -------
+    Indicator for each prediction whether it was matched, sorted by the criteria explained in
+    `_get_prediction_sort_key`.
+    """
+    sort_key_prediction_matched: List[Tuple[PredictionSortKey, bool]] = []
+    total_annotations = 0
+    for docid, matching in docid_to_matching.items():
+        for pred_i, (pred, gold) in enumerate(matching.ordered_predictions_with_match):
+            sort_key_prediction_matched.append(
+                (_get_prediction_sort_key(pred.score, pred_i, docid), gold is not None)
             )
-            metric_to_sort_key_matched_pairs[metric].extend(
-                _get_sort_key_matched_pairs(kile_matching, document.docid)
-            )
-            metric_to_total_annotations[metric] += len(kile_annotations)
+        total_annotations += len(matching.annotations)
 
-            metric = "lir_with_text" if use_text else "lir"
-            lir_matching, _line_item_matching = get_lir_matches(
-                predictions=lir_predictions,
-                annotations=lir_annotations,
-                pcc_set=pcc_set,
-                iou_threshold=iou_threshold,
-            )
-            metric_to_sort_key_matched_pairs[metric].extend(
-                _get_sort_key_matched_pairs(lir_matching, document.docid)
-            )
-            metric_to_total_annotations[metric] += len(lir_annotations)
-
-    metric_to_average_precision = {}
-    for metric, sort_key_matched_pairs in metric_to_sort_key_matched_pairs.items():
-        sorted_predictions_matched = [
-            matched
-            for _sort_key, matched in sorted(sort_key_matched_pairs, key=operator.itemgetter(0))
-        ]
-        metric_to_average_precision[metric] = compute_average_precision(
-            sorted_predictions_matched=sorted_predictions_matched,
-            total_annotations=metric_to_total_annotations[metric],
-        )
-    return metric_to_average_precision
+    return [
+        matched
+        for _sort_key, matched in sorted(sort_key_prediction_matched, key=operator.itemgetter(0))
+    ]
 
 
 def _get_prediction_sort_key(
@@ -140,17 +384,22 @@ def _get_prediction_sort_key(
     3.  The document id. Document id is hashed together with the prediction_i to make sure
         documents are not always sorted in the same order (for different prediction indices) which
         would make some documents more important for the evaluation than others.
+
+    Parameters
+    ----------
+    score
+        Prediction score (confidence).
+    prediction_i
+        The original rank of the prediction for the document as given on the input.
+    docid
+        Document ID
+
+    Returns
+    -------
+    A tuple whose ordering corresponds to the criteria described above.
     """
     if score is None:
         score = 1
-    return (-score, prediction_i, hash((docid, prediction_i)))
-
-
-def _get_sort_key_matched_pairs(
-    field_matching: FieldMatching, docid: str
-) -> Sequence[Tuple[PredictionSortKey, bool]]:
-    """For each prediction return its sort key and an indicator whether it was matched."""
-    return [
-        (_get_prediction_sort_key(pred.score, pred_i, docid), gold is not None)
-        for pred_i, (pred, gold) in enumerate(field_matching.ordered_predictions_with_match)
-    ]
+    hashed_docid = hashlib.sha1(docid.encode())
+    hashed_docid.update(prediction_i.to_bytes(8, "little"))
+    return (-score, prediction_i, hashed_docid.hexdigest()[:16])
