@@ -13,15 +13,15 @@ class Field:
     fieldtype: Optional[str] = None
     line_item_id: Optional[int] = None
 
-    # The following flag can be set for some predictions in which case these will be only used for
-    # Average Precision (AP) computation but they will not be used for:
+    # The flag `use_only_for_ap` can be set for some predictions in which case these will be only
+    # used for Average Precision (AP) computation but they will not be used for:
     # * f1, precision, recall, true positives, false positives, false negatives computation.
     # * Matching of line items. Line items matching is computed only once for each document (not
     #   iteratively as in AP matching) from all predictions that have use_only_for_ap=False.
     #
     # Notice that for AP it can never hurt to add additional predictions if their score is lower
-    # than the previously added predictions so this flag can be used for predictions that would
-    # be otherwise discarded as noise.
+    # than the score of all other predictions (across all documents) so this flag can be used for
+    # predictions that would be otherwise discarded as noise.
     #
     # Warning: All predictions with this flag set to True are considered to have lower score than
     # all predictions with this flag set to False, even if provided `score` suggests otherwise.
@@ -36,7 +36,7 @@ class Field:
         return cls(bbox=bbox, **dct_copy)
 
     @property
-    def normalized_score(self) -> float:
+    def sorting_score(self) -> float:
         """
         Score used for sorting predictions.
 

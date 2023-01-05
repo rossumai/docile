@@ -151,7 +151,7 @@ def get_matches(
     ordered_predictions_with_match: List[Tuple[Field, Optional[Field]]] = [
         (pred, None) for pred in predictions
     ]
-    for pred_i, pred in sorted(enumerate(predictions), key=_sort_by_score):
+    for pred_i, pred in sorted(enumerate(predictions), key=_get_sort_key_by_score):
         gold_candidates = fieldtype_page_to_annotations[pred.fieldtype][pred.page]
         for gold_i, gold in enumerate(gold_candidates):
             iou = pccs_iou(
@@ -176,7 +176,7 @@ def get_matches(
     return FieldMatching(ordered_predictions_with_match, false_negatives)
 
 
-def _sort_by_score(pred_with_index: Tuple[int, Field]) -> Tuple[float, int]:
+def _get_sort_key_by_score(pred_with_index: Tuple[int, Field]) -> Tuple[float, int]:
     """Sort predictions by score, use original order for equal scores."""
     pred_i, pred = pred_with_index
-    return (-pred.normalized_score, pred_i)
+    return (-pred.sorting_score, pred_i)

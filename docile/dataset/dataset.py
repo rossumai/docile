@@ -43,6 +43,15 @@ class Dataset:
     def __getitem__(
         self, id_or_pos_or_slice: Union[str, int, slice]
     ) -> Union[Document, "Dataset"]:
+        """
+        Get a single document or a sliced dataset.
+
+        The function has three possible behaviours based on the parameter type:
+        * If the parameter is string, return the document with this docid
+        * If the parameter is int, return the document with this index
+        * If the parameter is slice, return a new Dataset representing the corresponding subset of
+          documents.
+        """
         if isinstance(id_or_pos_or_slice, slice):
             str_start = "" if id_or_pos_or_slice.start is None else str(id_or_pos_or_slice.start)
             str_stop = "" if id_or_pos_or_slice.stop is None else str(id_or_pos_or_slice.stop)
