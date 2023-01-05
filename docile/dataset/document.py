@@ -67,9 +67,9 @@ class Document:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],  # noqa: U100
-        exc: Optional[BaseException],  # noqa: U100
-        traceback: Optional[TracebackType],  # noqa: U100
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
     ) -> None:
         self._open = False
         for ctx in (self.ocr, self.annotation, *self.images.values()):
