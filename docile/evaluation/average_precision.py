@@ -15,7 +15,7 @@ def compute_average_precision(
     2.  For two consecutive (recall,precision) pairs (r1,p1), (r2,p2) where r2>r1 we use the
         precision 'p2' in the interval [r1,r2] when computing the Average Precision.
 
-    Points 2. and 3. can be also explained as computing the integral (from 0 to 1) over a function
+    Points 1. and 2. can be also explained as computing the integral (from 0 to 1) over a function
     'precision(r)' which is defined as:
         precision(r) == max{p' | there exists (p',r') with r' >= r}
 

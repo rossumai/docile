@@ -8,7 +8,8 @@ import pytest
 
 from docile.dataset import BBox, Dataset, Field
 from docile.evaluation.evaluate import (
-    EvaluationReport,
+    EvaluationResult,
+    PredictionsValidationError,
     _get_prediction_sort_key,
     _sort_predictions,
     _validate_predictions,
@@ -19,11 +20,11 @@ from docile.evaluation.pcc_field_matching import FieldMatching
 
 
 @pytest.fixture
-def mock_evaluation_report() -> EvaluationReport:
+def mock_evaluation_result() -> EvaluationResult:
     field1 = Field(BBox(0, 0, 1, 1), page=0, score=1, fieldtype="f1")
     field05 = Field(BBox(0, 0, 1, 1), page=0, score=0.5, fieldtype="f05")
     field_ap_only = Field(BBox(0, 0, 1, 1), page=0, score=1, fieldtype="f1", use_only_for_ap=True)
-    evaluation_report = EvaluationReport(
+    evaluation_result = EvaluationResult(
         task_to_docid_to_matching={
             "kile": {
                 "a": FieldMatching(
@@ -52,18 +53,18 @@ def mock_evaluation_report() -> EvaluationReport:
         dataset_name="mock-dataset",
         iou_threshold=1.0,
     )
-    return evaluation_report
+    return evaluation_result
 
 
-def test_evaluation_report_get_primary_metric(mock_evaluation_report: EvaluationReport) -> None:
+def test_evaluation_result_get_primary_metric(mock_evaluation_result: EvaluationResult) -> None:
     # AP = 0.5 for KILE because recall is 1/3 and the first prediction is the correct one.
-    assert mock_evaluation_report.get_primary_metric("kile") == 1 / 3
+    assert mock_evaluation_result.get_primary_metric("kile") == 1 / 3
     # f1 = 1/2 for LIR because both precision and recall are 0.5 (2/4)
-    assert mock_evaluation_report.get_primary_metric("lir") == 1 / 2
+    assert mock_evaluation_result.get_primary_metric("lir") == 1 / 2
 
 
-def test_evaluation_report_get_metrics(mock_evaluation_report: EvaluationReport) -> None:
-    assert mock_evaluation_report.get_metrics("kile") == {
+def test_evaluation_result_get_metrics(mock_evaluation_result: EvaluationResult) -> None:
+    assert mock_evaluation_result.get_metrics("kile") == {
         "TP": 1,
         "FP": 3,
         "FN": 2,
@@ -72,7 +73,7 @@ def test_evaluation_report_get_metrics(mock_evaluation_report: EvaluationReport)
         "f1": pytest.approx(2 / 7),
         "AP": 1 / 3,
     }
-    assert mock_evaluation_report.get_metrics("lir") == {
+    assert mock_evaluation_result.get_metrics("lir") == {
         "TP": 2,
         "FP": 2,
         "FN": 2,
@@ -81,7 +82,7 @@ def test_evaluation_report_get_metrics(mock_evaluation_report: EvaluationReport)
         "f1": 1 / 2,
         "AP": (1 / 4) * (1 / 1) + (1 / 4) * (2 / 4) + (1 / 4) * (3 / 8),
     }
-    assert mock_evaluation_report.get_metrics("kile", fieldtype="f1") == {
+    assert mock_evaluation_result.get_metrics("kile", fieldtype="f1") == {
         "TP": 1,
         "FP": 1,
         "FN": 2,
@@ -90,7 +91,7 @@ def test_evaluation_report_get_metrics(mock_evaluation_report: EvaluationReport)
         "f1": pytest.approx(2 / 5),
         "AP": 1 / 3,
     }
-    assert mock_evaluation_report.get_metrics("lir", fieldtype="f05", docid="b") == {
+    assert mock_evaluation_result.get_metrics("lir", fieldtype="f05", docid="b") == {
         "TP": 1,
         "FP": 2,
         "FN": 0,
@@ -101,9 +102,9 @@ def test_evaluation_report_get_metrics(mock_evaluation_report: EvaluationReport)
     }
 
 
-def test_evaluation_report_print_report(mock_evaluation_report: EvaluationReport) -> None:
+def test_evaluation_result_print_report(mock_evaluation_result: EvaluationResult) -> None:
     assert (
-        mock_evaluation_report.print_report(include_fieldtypes=False, floatfmt=".2f")
+        mock_evaluation_result.print_report(include_fieldtypes=False, floatfmt=".2f")
         == """\
 Evaluation report for mock-dataset
 ==================================
@@ -127,7 +128,7 @@ Primary metric (f1): 0.5
 
 
 def _assert_metrics_at_least(
-    evaluation_report: EvaluationReport,
+    evaluation_result: EvaluationResult,
     minimum_value: float,
     tasks: Tuple[str, ...] = ("kile", "lir"),
     eval_same_text: Tuple[bool, ...] = (False, True),
@@ -135,7 +136,7 @@ def _assert_metrics_at_least(
 ) -> None:
     for task in tasks:
         for same_text in eval_same_text:
-            metrics = evaluation_report.get_metrics(task=task, same_text=same_text)
+            metrics = evaluation_result.get_metrics(task=task, same_text=same_text)
             for metric_name in check_metric_names:
                 assert metrics[metric_name] == minimum_value
 
@@ -149,8 +150,8 @@ def test_evaluate_dataset_perfect_predictions(
     lir_predictions = {
         sample_dataset_docid: sample_dataset[sample_dataset_docid].annotation.li_fields
     }
-    evaluation_report = evaluate_dataset(sample_dataset, kile_predictions, lir_predictions)
-    _assert_metrics_at_least(evaluation_report, 1.0)
+    evaluation_result = evaluate_dataset(sample_dataset, kile_predictions, lir_predictions)
+    _assert_metrics_at_least(evaluation_result, 1.0)
 
 
 def test_evaluate_dataset_perfect_predictions_with_perturbations(
@@ -177,10 +178,10 @@ def test_evaluate_dataset_perfect_predictions_with_perturbations(
             for field in sample_dataset[sample_dataset_docid].annotation.li_fields
         ]
     }
-    evaluation_report = evaluate_dataset(
+    evaluation_result = evaluate_dataset(
         sample_dataset, kile_predictions, lir_predictions, iou_threshold=0.9
     )
-    _assert_metrics_at_least(evaluation_report, 1.0)
+    _assert_metrics_at_least(evaluation_result, 1.0)
 
 
 def test_evaluate_dataset_kile_missing_and_wrong_predictions(
@@ -222,12 +223,12 @@ def test_evaluate_dataset_kile_missing_and_wrong_predictions(
     # The best precision is achieved for the highest recall which means it will be used also for
     # the smaller recall values (check average_precison.py for details).
 
-    # the prediction with score < 1 does not affect the result
+    # the false prediction with the lowest score does not affect AP value
     ap_precision = true_positives / (true_positives + false_positives - 1)
     ap = recall * ap_precision
 
-    evaluation_report = evaluate_dataset(sample_dataset, kile_predictions, {})
-    assert evaluation_report.get_metrics("kile") == {
+    evaluation_result = evaluate_dataset(sample_dataset, kile_predictions, {})
+    assert evaluation_result.get_metrics("kile") == {
         "AP": pytest.approx(ap),
         "f1": f1,
         "precision": precision,
@@ -301,8 +302,8 @@ def test_evaluate_dataset_lir_missing_and_wrong_predictions(
     ap_precision = true_positives / (true_positives + false_positives - 2)
     ap = recall * ap_precision
 
-    evaluation_report = evaluate_dataset(sample_dataset, {}, lir_predictions)
-    assert evaluation_report.get_metrics("lir") == {
+    evaluation_result = evaluate_dataset(sample_dataset, {}, lir_predictions)
+    assert evaluation_result.get_metrics("lir") == {
         "AP": pytest.approx(ap),
         "f1": f1,
         "precision": precision,
@@ -351,26 +352,39 @@ def test_compute_metrics() -> None:
 def test_validate_predictions(sample_dataset: Dataset, sample_dataset_docid: str) -> None:
     bbox = BBox(0, 0, 1, 1)
     with pytest.raises(
-        ValueError,
+        PredictionsValidationError,
         match="You need to provide at least one prediction for at least one of the tasks.",
     ):
-        _validate_predictions(sample_dataset, {}, {})
+        _validate_predictions(sample_dataset, {})
 
-    missing_fieldtype = {sample_dataset_docid: [Field(bbox=bbox, page=0)]}
-    with pytest.raises(ValueError, match="Some prediction is missing 'fieldtype'."):
-        _validate_predictions(sample_dataset, missing_fieldtype, {})
+    too_many_predictions = {"task": {sample_dataset_docid: [Field(bbox=bbox, page=2)] * 1001}}
+    with pytest.raises(
+        PredictionsValidationError,
+        match=f"TASK: Exceeded limit of 1000 predictions per page for doc: {sample_dataset_docid}",
+    ):
+        _validate_predictions(sample_dataset, too_many_predictions)
 
-    extra_line_item_id = {
+    missing_fieldtype = {"task": {sample_dataset_docid: [Field(bbox=bbox, page=0)]}}
+    with pytest.raises(
+        PredictionsValidationError, match="TASK: Some prediction is missing 'fieldtype'."
+    ):
+        _validate_predictions(sample_dataset, missing_fieldtype)
+
+    with_line_item_id = {
         sample_dataset_docid: [Field(bbox=bbox, page=0, fieldtype="f", line_item_id=8)]
     }
-    _validate_predictions(sample_dataset, {}, extra_line_item_id)
-    with pytest.raises(ValueError, match="Some KILE prediction has extra 'line_item_id'."):
-        _validate_predictions(sample_dataset, extra_line_item_id, {})
+    _validate_predictions(sample_dataset, {"lir": with_line_item_id})  # ok
+    with pytest.raises(
+        PredictionsValidationError, match="KILE: Some prediction has extra 'line_item_id'."
+    ):
+        _validate_predictions(sample_dataset, {"kile": with_line_item_id})
 
-    missing_line_item_id = {sample_dataset_docid: [Field(bbox=bbox, page=0, fieldtype="f")]}
-    _validate_predictions(sample_dataset, missing_line_item_id, {})
-    with pytest.raises(ValueError, match="Some LIR prediction is missing 'line_item_id'."):
-        _validate_predictions(sample_dataset, {}, missing_line_item_id)
+    without_line_item_id = {sample_dataset_docid: [Field(bbox=bbox, page=0, fieldtype="f")]}
+    _validate_predictions(sample_dataset, {"kile": without_line_item_id})
+    with pytest.raises(
+        PredictionsValidationError, match="LIR: Some prediction is missing 'line_item_id'."
+    ):
+        _validate_predictions(sample_dataset, {"lir": without_line_item_id})
 
     only_part_with_scores = {
         sample_dataset_docid: [
@@ -378,8 +392,28 @@ def test_validate_predictions(sample_dataset: Dataset, sample_dataset_docid: str
             Field(bbox=bbox, page=0, fieldtype="f2", score=1.0),
         ]
     }
-    with pytest.raises(ValueError, match="Either all or no predictions need to have scores"):
-        _validate_predictions(sample_dataset, only_part_with_scores, {})
+    with pytest.raises(
+        PredictionsValidationError,
+        match="TASK: Either all or no predictions should have 'score' defined",
+    ):
+        _validate_predictions(sample_dataset, {"task": only_part_with_scores})
+
+    extra_doc = {sample_dataset_docid: [], "mock-docid": []}
+    with pytest.raises(
+        PredictionsValidationError,
+        match="TASK: Predictions provided for 1 documents not in the dataset sample-dataset/dev",
+    ):
+        _validate_predictions(sample_dataset, {"task": extra_doc})
+
+    missing_doc = {}
+    with pytest.raises(
+        PredictionsValidationError,
+        match=(
+            "TASK: Predictions not provided for 1/1 documents. Pass an empty list of predictions "
+            "for these documents if this was intended."
+        ),
+    ):
+        _validate_predictions(sample_dataset, {"task": missing_doc})
 
 
 def test_sort_predictions() -> None:

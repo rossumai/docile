@@ -1,8 +1,9 @@
 import hashlib
 import logging
 import operator
+from collections import Counter
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Sequence, Tuple, Union, cast
+from typing import Dict, List, Mapping, Sequence, Tuple, Union
 
 from tabulate import tabulate
 from tqdm import tqdm
@@ -21,9 +22,15 @@ PredictionSortKey = Tuple[float, int, str]
 TASK_TO_PRIMARY_METRIC_NAME = {"kile": "AP", "lir": "f1"}
 METRIC_NAMES = ["AP", "f1", "precision", "recall", "TP", "FP", "FN"]
 
+MAX_NUMBER_OF_PREDICTIONS_PER_PAGE = 1000
+
+
+class PredictionsValidationError(ValueError):
+    pass
+
 
 @dataclass(frozen=True)
-class EvaluationReport:
+class EvaluationResult:
     """
     Class with the evaluation result.
 
@@ -37,7 +44,7 @@ class EvaluationReport:
 
     task_to_docid_to_matching: Mapping[str, Mapping[str, FieldMatching]]
     dataset_name: str  # name of evaluated Dataset
-    iou_threshold: float  # which value was used to generate this report
+    iou_threshold: float  # which value was used to for the evaluation
 
     def get_primary_metric(self, task: str) -> float:
         """Return the primary metric used for DocILE'23 benchmark competition."""
@@ -155,7 +162,7 @@ def evaluate_dataset(
     docid_to_kile_predictions: Mapping[str, Sequence[Field]],
     docid_to_lir_predictions: Mapping[str, Sequence[Field]],
     iou_threshold: float = 1.0,
-) -> EvaluationReport:
+) -> EvaluationResult:
     """
     Evaluate the dataset on KILE and LIR using the given predictions.
 
@@ -175,19 +182,22 @@ def evaluate_dataset(
 
     Returns
     -------
-    Evaluation report containing the matched predictions. Use its `print_metrics()` method to get
+    Evaluation result containing the matched predictions. Use its `print_metrics()` method to get
     the metrics.
     """
-    _validate_predictions(dataset, docid_to_kile_predictions, docid_to_lir_predictions)
-
-    tasks = [
-        task
+    # Only evaluate tasks with at least 1 provided prediction.
+    task_to_docid_to_predictions = {
+        task: docid_to_predictions
         for task, docid_to_predictions in [
             ("kile", docid_to_kile_predictions),
             ("lir", docid_to_lir_predictions),
         ]
         if sum(len(predictions) for predictions in docid_to_predictions.values()) > 0
-    ]
+    }
+
+    _validate_predictions(dataset, task_to_docid_to_predictions)
+
+    tasks = task_to_docid_to_predictions.keys()
     task_to_docid_to_matching = {task: {} for task in tasks}
     for document in tqdm(dataset, desc="Run matching for documents"):
         pcc_set = get_document_pccs(document)
@@ -210,7 +220,7 @@ def evaluate_dataset(
             )
             task_to_docid_to_matching["lir"][document.docid] = lir_matching
 
-    return EvaluationReport(
+    return EvaluationResult(
         task_to_docid_to_matching=task_to_docid_to_matching,
         dataset_name=dataset.name,
         iou_threshold=iou_threshold,
@@ -259,45 +269,58 @@ def compute_metrics(
 
 def _validate_predictions(
     dataset: Dataset,
-    docid_to_kile_predictions: Mapping[str, Sequence[Field]],
-    docid_to_lir_predictions: Mapping[str, Sequence[Field]],
+    task_to_docid_to_predictions: Mapping[str, Mapping[str, Sequence[Field]]],
 ) -> None:
     """Run basic checks on the provided predictions."""
-    metric_to_predictions = {
-        "kile": docid_to_kile_predictions,
-        "lir": docid_to_lir_predictions,
-    }
-    if all(
-        0 == sum(len(predictions) for predictions in docid_to_predictions.values())
-        for docid_to_predictions in metric_to_predictions.values()
-    ):
-        raise ValueError(
+    if len(task_to_docid_to_predictions) == 0:
+        raise PredictionsValidationError(
             "You need to provide at least one prediction for at least one of the tasks."
         )
 
-    if any(
-        pred.fieldtype is None
-        for docid_to_predictions in metric_to_predictions.values()
-        for predictions in docid_to_predictions.values()
-        for pred in predictions
-    ):
-        raise ValueError("Some prediction is missing 'fieldtype'.")
+    for task, docid_to_predictions in task_to_docid_to_predictions.items():
+        for docid, predictions in docid_to_predictions.items():
+            page_to_predictions = Counter(pred.page for pred in predictions)
+            if any(
+                num_predictions > MAX_NUMBER_OF_PREDICTIONS_PER_PAGE
+                for num_predictions in page_to_predictions.values()
+            ):
+                raise PredictionsValidationError(
+                    f"{task.upper()}: Exceeded limit of {MAX_NUMBER_OF_PREDICTIONS_PER_PAGE} "
+                    f"predictions per page for doc: {docid}"
+                )
 
-    if any(
-        pred.line_item_id is not None
-        for predictions in docid_to_kile_predictions.values()
-        for pred in predictions
-    ):
-        raise ValueError("Some KILE prediction has extra 'line_item_id'.")
+    for task, docid_to_predictions in task_to_docid_to_predictions.items():
+        if any(
+            pred.fieldtype is None
+            for predictions in docid_to_predictions.values()
+            for pred in predictions
+        ):
+            raise PredictionsValidationError(
+                f"{task.upper()}: Some prediction is missing 'fieldtype'."
+            )
 
-    if any(
-        pred.line_item_id is None
-        for predictions in docid_to_lir_predictions.values()
-        for pred in predictions
-    ):
-        raise ValueError("Some LIR prediction is missing 'line_item_id'.")
+    for task, docid_to_predictions in task_to_docid_to_predictions.items():
+        if task == "kile":
+            if any(
+                pred.line_item_id is not None
+                for predictions in docid_to_predictions.values()
+                for pred in predictions
+            ):
+                raise PredictionsValidationError(
+                    f"{task.upper()}: Some prediction has extra 'line_item_id'."
+                )
 
-    for metric, docid_to_predictions in metric_to_predictions.items():
+        if task == "lir":
+            if any(
+                pred.line_item_id is None
+                for predictions in docid_to_predictions.values()
+                for pred in predictions
+            ):
+                raise PredictionsValidationError(
+                    f"{task.upper()}: Some prediction is missing 'line_item_id'."
+                )
+
+    for task, docid_to_predictions in task_to_docid_to_predictions.items():
         have_scores = sum(
             sum(1 for f in fields if f.score is not None)
             for fields in docid_to_predictions.values()
@@ -305,46 +328,50 @@ def _validate_predictions(
         if have_scores > 0 and have_scores < sum(
             len(fields) for fields in docid_to_predictions.values()
         ):
-            raise ValueError("Either all or no predictions need to have scores")
-
-        if have_scores > 0:
-            max_ap_only_score = max(
-                (
-                    cast(float, pred.score)  # this is guaranteed by have_scores > 0
-                    for predictions in docid_to_predictions.values()
-                    for pred in predictions
-                    if pred.use_only_for_ap and pred.score is not None
-                ),
-                default=0,
+            raise PredictionsValidationError(
+                f"{task.upper()}: Either all or no predictions should have 'score' defined"
             )
-            min_not_ap_only_score = max(
-                (
-                    cast(float, pred.score)  # this is guaranteed by have_scores > 0
-                    for predictions in docid_to_predictions.values()
-                    for pred in predictions
-                    if not pred.use_only_for_ap and pred.score is not None
-                ),
-                default=1,
-            )
-            if max_ap_only_score > min_not_ap_only_score:
-                logger.warning(
-                    "Found a prediction with use_only_for_ap=True that has a higher score "
-                    f"({max_ap_only_score}) than another prediction with use_only_for_ap=False "
-                    f"({min_not_ap_only_score}). Note that all predictions with "
-                    "use_only_for_ap=True will be used (matched, counted in AP) only after all of "
-                    "the predictions with use_only_for_ap=False anyway."
-                )
 
+    for task, docid_to_predictions in task_to_docid_to_predictions.items():
         extra = len(set(docid_to_predictions.keys()).difference(dataset.docids))
         missing = len(set(dataset.docids).difference(docid_to_predictions.keys()))
         if extra:
-            logger.warning(
-                f"{metric}: Found predictions for {extra} documents not in the dataset {dataset}, "
-                "they will be ignored."
+            raise PredictionsValidationError(
+                f"{task.upper()}: Predictions provided for {extra} documents not in the dataset "
+                f"{dataset.name}."
             )
         if missing:
+            raise PredictionsValidationError(
+                f"{task.upper()}: Predictions not provided for {missing}/{len(dataset)} documents. "
+                "Pass an empty list of predictions for these documents if this was intended."
+            )
+
+    for task, docid_to_predictions in task_to_docid_to_predictions.items():
+        max_ap_only_score = max(
+            (
+                pred.score
+                for predictions in docid_to_predictions.values()
+                for pred in predictions
+                if pred.use_only_for_ap and pred.score is not None
+            ),
+            default=0,
+        )
+        min_not_ap_only_score = min(
+            (
+                pred.score
+                for predictions in docid_to_predictions.values()
+                for pred in predictions
+                if not pred.use_only_for_ap and pred.score is not None
+            ),
+            default=1,
+        )
+        if max_ap_only_score > min_not_ap_only_score:
             logger.warning(
-                f"{metric}: Did not find any predictions for {missing}/{len(dataset)} documents"
+                f"{task.upper()}: Found a prediction with use_only_for_ap=True that has a higher "
+                f"score ({max_ap_only_score}) than another prediction with use_only_for_ap=False "
+                f"({min_not_ap_only_score}). Note that all predictions with use_only_for_ap=True "
+                "will be used (matched, counted in AP) only after all of the predictions with "
+                "use_only_for_ap=False anyway."
             )
 
 
@@ -362,7 +389,7 @@ def _sort_predictions(docid_to_matching: Mapping[str, FieldMatching]) -> Sequenc
     for docid, matching in docid_to_matching.items():
         for pred_i, (pred, gold) in enumerate(matching.ordered_predictions_with_match):
             sort_key_prediction_matched.append(
-                (_get_prediction_sort_key(pred.normalized_score, pred_i, docid), gold is not None)
+                (_get_prediction_sort_key(pred.sorting_score, pred_i, docid), gold is not None)
             )
         total_annotations += len(matching.annotations)
 

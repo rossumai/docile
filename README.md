@@ -95,6 +95,6 @@ for document in dataset_test:
     docid_to_kile_predictions[document.docid] = kile_predictions
     docid_to_lir_predictions[document.docid] = lir_predictions
 
-evaluation_report = evaluate_dataset(dataset_test, docid_to_kile_predictions, docid_to_lir_predictions)
-print(evaluation_report.print_report(include_same_text=True))
+evaluation_result = evaluate_dataset(dataset_test, docid_to_kile_predictions, docid_to_lir_predictions)
+print(evaluation_result.print_report(include_same_text=True))
 ```
