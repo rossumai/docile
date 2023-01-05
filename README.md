@@ -63,24 +63,24 @@ If you wish to (re)generate OCR from scratch (e.g., on a different dataset), del
 
 # Example usage
 
-Assuming you have your dataset in `data/docile/` with two splits `data/docile/train.json` and
-`data/docile/test.json` (you might have to make this split if working with the dev set):
+Assuming you have your dataset in `data/docile/` with two splits `data/docile/train.json` and `data/docile/test.json`:
 
 ```python
 from pathlib import Path
 from docile.dataset import Dataset
-from docile.evaluation.evaluate import Metric, evaluate_dataset
+from docile.evaluation import evaluate_dataset
 
 DATASET_PATH = Path("data/docile")
-dataset_train = Dataset.from_file("train", DATASET_PATH)
+# example: take only first 10 documents for debugging
+dataset_train = Dataset.from_file("train", DATASET_PATH)[:10]
 
 for document in dataset_train:
     kile_fields = document.annotation.fields
     li_fields = document.annotation.li_fields
     for page in range(document.page_count):
         img = document.page_image(page)
-        kile_fields_page = [field for field in kile_fields if k.page == page]
-        li_fields_page = [field for field in li_fields if k.page == page]
+        kile_fields_page = [field for field in kile_fields if field.page == page]
+        li_fields_page = [field for field in li_fields if field.page == page]
         ocr = document.ocr.get_all_words(page)
         # ...Add to training set...
 
@@ -95,6 +95,6 @@ for document in dataset_test:
     docid_to_kile_predictions[document.docid] = kile_predictions
     docid_to_lir_predictions[document.docid] = lir_predictions
 
-eval_dict = evaluate_dataset(dataset_test, docid_to_kile_predictions, docid_to_lir_predictions)
-print(f"Test AP\n{eval_dict}")
+evaluation_report = evaluate_dataset(dataset_test, docid_to_kile_predictions, docid_to_lir_predictions)
+print(evaluation_report.print_report(include_same_text=True))
 ```

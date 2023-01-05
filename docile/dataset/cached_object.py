@@ -34,9 +34,9 @@ class CachedObject(Generic[CT]):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],  # noqa: U100
-        exc: Optional[BaseException],  # noqa: U100
-        traceback: Optional[TracebackType],  # noqa: U100
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
     ) -> None:
         if not self.mem_cache_permanent:
             self.mem_cache = False

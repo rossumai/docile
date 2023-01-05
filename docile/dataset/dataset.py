@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Iterable, Union
+from typing import Iterable, Union, overload
 
 from tqdm import tqdm
 
@@ -32,12 +32,34 @@ class Dataset:
     def name(self) -> str:
         return f"{self.dataset_path.name}/{self.split_name}"
 
-    def __getitem__(self, id_or_pos: Union[str, int]) -> Document:
-        if isinstance(id_or_pos, str):
-            return self.docs[id_or_pos]
-        elif isinstance(id_or_pos, int):
-            return self[self.docids[id_or_pos]]
-        raise KeyError(f"Unknown document ID or index {id_or_pos}.")
+    @overload
+    def __getitem__(self, id_or_pos_or_slice: Union[str, int]) -> Document:
+        pass
+
+    @overload
+    def __getitem__(self, id_or_pos_or_slice: slice) -> "Dataset":
+        pass
+
+    def __getitem__(
+        self, id_or_pos_or_slice: Union[str, int, slice]
+    ) -> Union[Document, "Dataset"]:
+        if isinstance(id_or_pos_or_slice, slice):
+            str_start = "" if id_or_pos_or_slice.start is None else str(id_or_pos_or_slice.start)
+            str_stop = "" if id_or_pos_or_slice.stop is None else str(id_or_pos_or_slice.stop)
+            if id_or_pos_or_slice.step is None:
+                str_slice = f"{str_start}:{str_stop}"
+            else:
+                str_slice = f"{str_start}:{str_stop}:{id_or_pos_or_slice.step}"
+            return self.__class__(
+                docids=self.docids[id_or_pos_or_slice],
+                dataset_path=self.dataset_path,
+                split_name=f"{self.split_name}[{str_slice}]",
+            )
+        if isinstance(id_or_pos_or_slice, str):
+            return self.docs[id_or_pos_or_slice]
+        elif isinstance(id_or_pos_or_slice, int):
+            return self[self.docids[id_or_pos_or_slice]]
+        raise KeyError(f"Unknown document ID or index {id_or_pos_or_slice}.")
 
     def __iter__(self) -> Iterable[Document]:
         for docid in self.docids:
