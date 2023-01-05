@@ -1,54 +1,5 @@
 {
-  "attributes": [
-    {
-      "choices": [
-        "finish"
-      ],
-      "name": "controlling"
-    },
-    {
-      "choices": [
-        "tax_invoice"
-      ],
-      "name": "invoice_type"
-    },
-    {
-      "choices": [
-        "eng"
-      ],
-      "name": "language"
-    },
-    {
-      "choices": [
-        "other"
-      ],
-      "name": "currency"
-    },
-    {
-      "choices": [
-        "normal"
-      ],
-      "name": "table_structure"
-    },
-    {
-      "choices": [
-        "column_borders"
-      ],
-      "name": "border_type"
-    }
-  ],
   "field_extractions": [
-    {
-      "bbox": [
-        0.7153225806451613,
-        0.2231003039513678,
-        0.7830645161290323,
-        0.23465045592705167
-      ],
-      "fieldtype": "document_name",
-      "page": 0,
-      "text": "INVOICE"
-    },
     {
       "bbox": [
         0.8201612903225807,
@@ -56,7 +7,7 @@
         0.8838709677419355,
         0.20972644376899696
       ],
-      "fieldtype": "invoice_id",
+      "fieldtype": "document_id",
       "page": 0,
       "text": "99999999"
     },
@@ -89,7 +40,7 @@
         0.8443548387096774,
         0.25349544072948327
       ],
-      "fieldtype": "sender_name",
+      "fieldtype": "vendor_name",
       "page": 0,
       "text": "PHILIP MORRIS INCORPORATED"
     },
@@ -111,7 +62,7 @@
         0.3443548387096774,
         0.19817629179331306
       ],
-      "fieldtype": "recipient_name",
+      "fieldtype": "customer_billing_name",
       "page": 0,
       "text": "Philip Morris Valued Customer"
     },
@@ -122,7 +73,7 @@
         0.34346283622092466,
         0.225531914893617
       ],
-      "fieldtype": "customer_billing_addrline",
+      "fieldtype": "customer_billing_address",
       "page": 0,
       "text": "Philip Morris Valued Customer\n999 Ninety Ninth Street\nAnywhere, USA, 99999"
     },
@@ -133,7 +84,7 @@
         0.8846774193548387,
         0.8442249240121581
       ],
-      "fieldtype": "amount_total",
+      "fieldtype": "amount_total_gross",
       "page": 0,
       "text": "4,759.20"
     },
@@ -155,7 +106,7 @@
         0.8814516129032258,
         0.20972644376899696
       ],
-      "fieldtype": "var_sym",
+      "fieldtype": "variable_symbol",
       "page": 0,
       "text": "99999999"
     },
@@ -166,7 +117,7 @@
         0.4274193548387097,
         0.9268996960486322
       ],
-      "fieldtype": "terms",
+      "fieldtype": "payment_terms",
       "page": 0,
       "text": "due immediately"
     }
@@ -174,108 +125,12 @@
   "line_item_extractions": [
     {
       "bbox": [
-        0.11370967741935484,
-        0.35303951367781156,
-        0.15564516129032258,
-        0.3700607902735562
-      ],
-      "fieldtype": "table_column_quantity_2",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "NUMBER\nOF CASES"
-    },
-    {
-      "bbox": [
-        0.17903225806451614,
-        0.3519756838905775,
-        0.2161290322580645,
-        0.3723404255319149
-      ],
-      "fieldtype": "table_column_code",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "ITEM\nNUMBER (UPC)"
-    },
-    {
-      "bbox": [
-        0.3395161290322581,
-        0.35790273556231,
-        0.3709677419354839,
-        0.3670212765957447
-      ],
-      "fieldtype": "table_column_description",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "BRAND"
-    },
-    {
-      "bbox": [
-        0.4806451612903226,
-        0.35379939209726446,
-        0.5209677419354839,
-        0.3708206686930091
-      ],
-      "fieldtype": "table_column_quantity_3",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "QUANTITY\nTO CASE"
-    },
-    {
-      "bbox": [
-        0.5288119022532014,
-        0.35843161094224923,
-        0.5494777313989301,
-        0.36647213779128673
-      ],
-      "fieldtype": "table_column_other",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "SIZE"
-    },
-    {
-      "bbox": [
-        0.5983870967741935,
-        0.35790273556231,
-        0.6395161290322581,
-        0.3658054711246201
-      ],
-      "fieldtype": "table_column_quantity",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "QUANTITY"
-    },
-    {
-      "bbox": [
-        0.7096774193548387,
-        0.3578034447821682,
-        0.7519695250445777,
-        0.3668490374873354
-      ],
-      "fieldtype": "table_column_amount",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "LIST PRICE"
-    },
-    {
-      "bbox": [
-        0.8201612903225807,
-        0.3593110435663627,
-        0.8547986910358242,
-        0.3668490374873354
-      ],
-      "fieldtype": "table_column_amount_total",
-      "line_item_id": 0,
-      "page": 0,
-      "text": "AMOUNT"
-    },
-    {
-      "bbox": [
         0.12580645161290321,
         0.3884498480243161,
         0.14112903225806453,
         0.4006079027355623
       ],
-      "fieldtype": "table_column_quantity_2",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 1,
       "page": 0,
       "text": "4"
@@ -287,7 +142,7 @@
         0.22419354838709676,
         0.4006079027355623
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 1,
       "page": 0,
       "text": "42630"
@@ -299,7 +154,7 @@
         0.46048387096774196,
         0.4006079027355623
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 1,
       "page": 0,
       "text": "MARL FF REG LS HP 6M PROM"
@@ -311,22 +166,10 @@
         0.5080645161290323,
         0.4006079027355623
       ],
-      "fieldtype": "table_column_quantity_3",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 1,
       "page": 0,
       "text": "6M"
-    },
-    {
-      "bbox": [
-        0.5290322580645161,
-        0.3884498480243161,
-        0.5483870967741935,
-        0.4006079027355623
-      ],
-      "fieldtype": "table_column_other",
-      "line_item_id": 1,
-      "page": 0,
-      "text": "20"
     },
     {
       "bbox": [
@@ -335,7 +178,7 @@
         0.6709677419354839,
         0.4006079027355623
       ],
-      "fieldtype": "table_column_quantity",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 1,
       "page": 0,
       "text": "24,000"
@@ -347,7 +190,7 @@
         0.7588709677419355,
         0.4006079027355623
       ],
-      "fieldtype": "table_column_amount",
+      "fieldtype": "line_item_unit_price_gross",
       "line_item_id": 1,
       "page": 0,
       "text": "132.20"
@@ -359,7 +202,7 @@
         0.8911290322580645,
         0.4006079027355623
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 1,
       "page": 0,
       "text": "3,172.80"
@@ -371,7 +214,7 @@
         0.22419354838709676,
         0.4121580547112462
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 2,
       "page": 0,
       "text": "1XXXX"
@@ -383,7 +226,7 @@
         0.46048387096774196,
         0.4121580547112462
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 2,
       "page": 0,
       "text": "Less Comp Cigs"
@@ -395,7 +238,7 @@
         0.8911290322580645,
         0.4121580547112462
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 2,
       "page": 0,
       "text": "1,269.12-"
@@ -407,7 +250,7 @@
         0.14112903225806453,
         0.43221884498480245
       ],
-      "fieldtype": "table_column_quantity_2",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 3,
       "page": 0,
       "text": "4"
@@ -419,7 +262,7 @@
         0.22419354838709676,
         0.43221884498480245
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 3,
       "page": 0,
       "text": "42640"
@@ -431,7 +274,7 @@
         0.46048387096774196,
         0.43221884498480245
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 3,
       "page": 0,
       "text": "MARL LT REG KS HP 6M PROM"
@@ -443,22 +286,10 @@
         0.5080645161290323,
         0.43221884498480245
       ],
-      "fieldtype": "table_column_quantity_3",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 3,
       "page": 0,
       "text": "6M"
-    },
-    {
-      "bbox": [
-        0.5290322580645161,
-        0.42006079027355625,
-        0.5483870967741935,
-        0.43221884498480245
-      ],
-      "fieldtype": "table_column_other",
-      "line_item_id": 3,
-      "page": 0,
-      "text": "20"
     },
     {
       "bbox": [
@@ -467,7 +298,7 @@
         0.6709677419354839,
         0.43221884498480245
       ],
-      "fieldtype": "table_column_quantity",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 3,
       "page": 0,
       "text": "24,000"
@@ -479,7 +310,7 @@
         0.7588709677419355,
         0.43221884498480245
       ],
-      "fieldtype": "table_column_amount",
+      "fieldtype": "line_item_unit_price_gross",
       "line_item_id": 3,
       "page": 0,
       "text": "132.20"
@@ -491,7 +322,7 @@
         0.8911290322580645,
         0.43221884498480245
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 3,
       "page": 0,
       "text": "3,172.80"
@@ -503,7 +334,7 @@
         0.22419354838709676,
         0.44437689969604866
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 4,
       "page": 0,
       "text": "1XXXXXX"
@@ -515,7 +346,7 @@
         0.46048387096774196,
         0.44437689969604866
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 4,
       "page": 0,
       "text": "Less Comp Cigs"
@@ -527,7 +358,7 @@
         0.8911290322580645,
         0.44437689969604866
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 4,
       "page": 0,
       "text": "1,269.12-"
@@ -539,7 +370,7 @@
         0.14112903225806453,
         0.47598784194528876
       ],
-      "fieldtype": "table_column_quantity_2",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 5,
       "page": 0,
       "text": "1"
@@ -551,7 +382,7 @@
         0.22419354838709676,
         0.47598784194528876
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 5,
       "page": 0,
       "text": "42660"
@@ -563,7 +394,7 @@
         0.46048387096774196,
         0.47598784194528876
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 5,
       "page": 0,
       "text": "MARL LT REG 100 HP 6M PROM"
@@ -575,22 +406,10 @@
         0.5080645161290323,
         0.47598784194528876
       ],
-      "fieldtype": "table_column_quantity_3",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 5,
       "page": 0,
       "text": "6M"
-    },
-    {
-      "bbox": [
-        0.5290322580645161,
-        0.4644376899696049,
-        0.5483870967741935,
-        0.47598784194528876
-      ],
-      "fieldtype": "table_column_other",
-      "line_item_id": 5,
-      "page": 0,
-      "text": "20"
     },
     {
       "bbox": [
@@ -599,7 +418,7 @@
         0.6709677419354839,
         0.47598784194528876
       ],
-      "fieldtype": "table_column_quantity",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 5,
       "page": 0,
       "text": "6,000"
@@ -611,7 +430,7 @@
         0.7588709677419355,
         0.47598784194528876
       ],
-      "fieldtype": "table_column_amount",
+      "fieldtype": "line_item_unit_price_gross",
       "line_item_id": 5,
       "page": 0,
       "text": "132.20"
@@ -623,7 +442,7 @@
         0.8911290322580645,
         0.47598784194528876
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 5,
       "page": 0,
       "text": "793.20"
@@ -635,7 +454,7 @@
         0.22419354838709676,
         0.48814589665653496
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 6,
       "page": 0,
       "text": "1XXXXX"
@@ -647,7 +466,7 @@
         0.46048387096774196,
         0.48814589665653496
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 6,
       "page": 0,
       "text": "Less Comp Cigs"
@@ -659,7 +478,7 @@
         0.8911290322580645,
         0.48814589665653496
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 6,
       "page": 0,
       "text": "317.28-"
@@ -671,7 +490,7 @@
         0.14112903225806453,
         0.5075987841945289
       ],
-      "fieldtype": "table_column_quantity_2",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 7,
       "page": 0,
       "text": "1"
@@ -683,7 +502,7 @@
         0.22419354838709676,
         0.5075987841945289
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 7,
       "page": 0,
       "text": "42670"
@@ -695,7 +514,7 @@
         0.46048387096774196,
         0.5075987841945289
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 7,
       "page": 0,
       "text": "MARL UL REG KS HP 6M PROM"
@@ -707,22 +526,10 @@
         0.5080645161290323,
         0.5075987841945289
       ],
-      "fieldtype": "table_column_quantity_3",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 7,
       "page": 0,
       "text": "6M"
-    },
-    {
-      "bbox": [
-        0.5290322580645161,
-        0.49544072948328266,
-        0.5483870967741935,
-        0.5075987841945289
-      ],
-      "fieldtype": "table_column_other",
-      "line_item_id": 7,
-      "page": 0,
-      "text": "20"
     },
     {
       "bbox": [
@@ -731,7 +538,7 @@
         0.6709677419354839,
         0.5075987841945289
       ],
-      "fieldtype": "table_column_quantity",
+      "fieldtype": "line_item_quantity",
       "line_item_id": 7,
       "page": 0,
       "text": "6,000"
@@ -743,7 +550,7 @@
         0.7588709677419355,
         0.5075987841945289
       ],
-      "fieldtype": "table_column_amount",
+      "fieldtype": "line_item_unit_price_gross",
       "line_item_id": 7,
       "page": 0,
       "text": "132.20"
@@ -755,7 +562,7 @@
         0.8911290322580645,
         0.5075987841945289
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 7,
       "page": 0,
       "text": "793.20"
@@ -767,7 +574,7 @@
         0.22419354838709676,
         0.5191489361702127
       ],
-      "fieldtype": "table_column_code",
+      "fieldtype": "line_item_code",
       "line_item_id": 8,
       "page": 0,
       "text": "1XXXXX"
@@ -779,7 +586,7 @@
         0.46048387096774196,
         0.5191489361702127
       ],
-      "fieldtype": "table_column_description",
+      "fieldtype": "line_item_description",
       "line_item_id": 8,
       "page": 0,
       "text": "Less Comp Cigs"
@@ -791,14 +598,261 @@
         0.8911290322580645,
         0.5191489361702127
       ],
-      "fieldtype": "table_column_amount_total",
+      "fieldtype": "line_item_amount_gross",
       "line_item_id": 8,
       "page": 0,
       "text": "317.28-"
     }
   ],
+  "line_item_headers": [
+    {
+      "bbox": [
+        0.11370967741935484,
+        0.35303951367781156,
+        0.15564516129032258,
+        0.3700607902735562
+      ],
+      "fieldtype": "line_item_quantity",
+      "line_item_id": 0,
+      "page": 0,
+      "text": "NUMBER\nOF CASES"
+    },
+    {
+      "bbox": [
+        0.17903225806451614,
+        0.3519756838905775,
+        0.2161290322580645,
+        0.3723404255319149
+      ],
+      "fieldtype": "line_item_code",
+      "line_item_id": 0,
+      "page": 0,
+      "text": "ITEM\nNUMBER (UPC)"
+    },
+    {
+      "bbox": [
+        0.3395161290322581,
+        0.35790273556231,
+        0.3709677419354839,
+        0.3670212765957447
+      ],
+      "fieldtype": "line_item_description",
+      "line_item_id": 0,
+      "page": 0,
+      "text": "BRAND"
+    },
+    {
+      "bbox": [
+        0.4806451612903226,
+        0.35379939209726446,
+        0.5209677419354839,
+        0.3708206686930091
+      ],
+      "fieldtype": "line_item_quantity",
+      "line_item_id": 0,
+      "page": 0,
+      "text": "QUANTITY\nTO CASE"
+    },
+    {
+      "bbox": [
+        0.5983870967741935,
+        0.35790273556231,
+        0.6395161290322581,
+        0.3658054711246201
+      ],
+      "fieldtype": "line_item_quantity",
+      "line_item_id": 0,
+      "page": 0,
+      "text": "QUANTITY"
+    },
+    {
+      "bbox": [
+        0.7096774193548387,
+        0.3578034447821682,
+        0.7519695250445777,
+        0.3668490374873354
+      ],
+      "fieldtype": "line_item_unit_price_gross",
+      "line_item_id": 0,
+      "page": 0,
+      "text": "LIST PRICE"
+    },
+    {
+      "bbox": [
+        0.8201612903225807,
+        0.3593110435663627,
+        0.8547986910358242,
+        0.3668490374873354
+      ],
+      "fieldtype": "line_item_amount_gross",
+      "line_item_id": 0,
+      "page": 0,
+      "text": "AMOUNT"
+    }
+  ],
   "metadata": {
-    "needs_ocr": true,
-    "page_count": 1
+    "border_type": "column_borders",
+    "cluster_id": 554,
+    "currency": "other",
+    "document_type": "tax_invoice",
+    "language": "eng",
+    "original_filename": "nkvc0055",
+    "page_count": 1,
+    "page_shapes": [
+      [
+        1240,
+        1645
+      ]
+    ],
+    "page_to_table_grids": {
+      "1": [
+        {
+          "columns": [
+            {
+              "column_type": null,
+              "left_position": 133
+            },
+            {
+              "column_type": "line_item_quantity",
+              "left_position": 156
+            },
+            {
+              "column_type": null,
+              "left_position": 175
+            },
+            {
+              "column_type": "line_item_code",
+              "left_position": 220
+            },
+            {
+              "column_type": null,
+              "left_position": 278
+            },
+            {
+              "column_type": "line_item_description",
+              "left_position": 331
+            },
+            {
+              "column_type": null,
+              "left_position": 571
+            },
+            {
+              "column_type": "line_item_quantity",
+              "left_position": 603
+            },
+            {
+              "column_type": null,
+              "left_position": 630
+            },
+            {
+              "column_type": null,
+              "left_position": 656
+            },
+            {
+              "column_type": null,
+              "left_position": 680
+            },
+            {
+              "column_type": "line_item_quantity",
+              "left_position": 775
+            },
+            {
+              "column_type": null,
+              "left_position": 832
+            },
+            {
+              "column_type": "line_item_unit_price_gross",
+              "left_position": 880
+            },
+            {
+              "column_type": null,
+              "left_position": 941
+            },
+            {
+              "column_type": "line_item_amount_gross",
+              "left_position": 1017
+            },
+            {
+              "column_type": null,
+              "left_position": 1105
+            }
+          ],
+          "height": 844,
+          "rows": [
+            {
+              "row_type": "header",
+              "top_position": 579
+            },
+            {
+              "row_type": "gap",
+              "top_position": 610
+            },
+            {
+              "row_type": "data",
+              "top_position": 639
+            },
+            {
+              "row_type": "data",
+              "top_position": 659
+            },
+            {
+              "row_type": "gap",
+              "top_position": 678
+            },
+            {
+              "row_type": "data",
+              "top_position": 691
+            },
+            {
+              "row_type": "data",
+              "top_position": 711
+            },
+            {
+              "row_type": "gap",
+              "top_position": 731
+            },
+            {
+              "row_type": "data",
+              "top_position": 764
+            },
+            {
+              "row_type": "data",
+              "top_position": 783
+            },
+            {
+              "row_type": "gap",
+              "top_position": 803
+            },
+            {
+              "row_type": "data",
+              "top_position": 815
+            },
+            {
+              "row_type": "data",
+              "top_position": 835
+            },
+            {
+              "row_type": "gap",
+              "top_position": 854
+            },
+            {
+              "row_type": null,
+              "top_position": 1113
+            },
+            {
+              "row_type": "gap",
+              "top_position": 1302
+            },
+            {
+              "row_type": "footer",
+              "top_position": 1353
+            }
+          ],
+          "width": 999
+        }
+      ]
+    },
+    "source": "ucsf",
+    "table_structure": "normal"
   }
 }

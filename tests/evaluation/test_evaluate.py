@@ -228,7 +228,7 @@ def test_evaluate_dataset_kile_missing_and_wrong_predictions(
 
     evaluation_report = evaluate_dataset(sample_dataset, kile_predictions, {})
     assert evaluation_report.get_metrics("kile") == {
-        "AP": ap,
+        "AP": pytest.approx(ap),
         "f1": f1,
         "precision": precision,
         "recall": recall,
