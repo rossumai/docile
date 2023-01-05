@@ -2,7 +2,7 @@ import hashlib
 import logging
 import operator
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Mapping, Sequence, Tuple, Union, cast
 
 from tabulate import tabulate
 from tqdm import tqdm
@@ -36,7 +36,7 @@ class EvaluationReport:
     """
 
     task_to_docid_to_matching: Mapping[str, Mapping[str, FieldMatching]]
-    dataset_name: str  # Name of evaluated Dataset
+    dataset_name: str  # name of evaluated Dataset
     iou_threshold: float  # which value was used to generate this report
 
     def get_primary_metric(self, task: str) -> float:
@@ -72,7 +72,7 @@ class EvaluationReport:
         if docid != "":
             docid_to_matching = {docid: docid_to_matching[docid]}
         docid_to_filtered_matching = {
-            docid: filter_field_matching(matching, same_text=same_text, fieldtype=fieldtype)
+            docid: matching.filter(same_text=same_text, fieldtype=fieldtype)
             for docid, matching in docid_to_matching.items()
         }
         return compute_metrics(docid_to_filtered_matching)
@@ -221,12 +221,23 @@ def compute_metrics(
     docid_to_matching: Mapping[str, FieldMatching]
 ) -> Dict[str, Union[int, float]]:
     """Compute different metrics for the given matchings between predictions and annotations."""
-    total_predictions = sum(len(matching.predictions) for matching in docid_to_matching.values())
-    total_annotations = sum(len(matching.annotations) for matching in docid_to_matching.values())
+    ap = compute_average_precision(
+        sorted_predictions_matched=_sort_predictions(docid_to_matching),
+        total_annotations=sum(
+            len(matching.annotations) for matching in docid_to_matching.values()
+        ),
+    )
 
-    true_positives = sum(len(matching.matches) for matching in docid_to_matching.values())
-    false_positives = sum(len(matching.false_positives) for matching in docid_to_matching.values())
-    false_negatives = sum(len(matching.false_negatives) for matching in docid_to_matching.values())
+    # Remove all predictions that were only for AP computation
+    matchings_no_ap = [
+        matching.filter(exclude_only_for_ap=True) for matching in docid_to_matching.values()
+    ]
+    total_predictions = sum(len(matching.predictions) for matching in matchings_no_ap)
+    total_annotations = sum(len(matching.annotations) for matching in matchings_no_ap)
+
+    true_positives = sum(len(matching.matches) for matching in matchings_no_ap)
+    false_positives = sum(len(matching.false_positives) for matching in matchings_no_ap)
+    false_negatives = sum(len(matching.false_negatives) for matching in matchings_no_ap)
 
     precision = true_positives / total_predictions if total_predictions else 0.0
     recall = true_positives / total_annotations if total_annotations else 0.0
@@ -235,10 +246,6 @@ def compute_metrics(
     else:
         f1 = 2 * precision * recall / (precision + recall)
 
-    ap = compute_average_precision(
-        sorted_predictions_matched=_sort_predictions(docid_to_matching),
-        total_annotations=total_annotations,
-    )
     return {
         "AP": ap,
         "f1": f1,
@@ -248,41 +255,6 @@ def compute_metrics(
         "FP": false_positives,
         "FN": false_negatives,
     }
-
-
-def filter_field_matching(
-    field_matching: FieldMatching, same_text: bool = False, fieldtype: str = ""
-) -> FieldMatching:
-    """
-    Filter matching based on the given options.
-
-    Parameters
-    ----------
-    field_matching
-        Matching between predictions nad annotations for one document.
-    same_text
-        If true, unmatch predictions whose text does not exactly match the ground truth in the
-        matched annotation.
-    fieldtype
-        If nonempty only keep predictions and annotations with the specified fieldtype.
-    """
-
-    def is_fieldtype_ok(ft: Optional[str]) -> bool:
-        return fieldtype == "" or ft == fieldtype
-
-    new_false_negatives = [
-        gold for gold in field_matching.false_negatives if is_fieldtype_ok(gold.fieldtype)
-    ]
-    new_ordered_predictions_with_match: List[Tuple[Field, Optional[Field]]] = []
-    for pred, gold in field_matching.ordered_predictions_with_match:
-        if not is_fieldtype_ok(pred.fieldtype):
-            continue
-        if gold is not None and same_text and pred.text != gold.text:
-            new_false_negatives.append(gold)
-            new_ordered_predictions_with_match.append((pred, None))
-        else:
-            new_ordered_predictions_with_match.append((pred, gold))
-    return FieldMatching(new_ordered_predictions_with_match, new_false_negatives)
 
 
 def _validate_predictions(
@@ -335,6 +307,34 @@ def _validate_predictions(
         ):
             raise ValueError("Either all or no predictions need to have scores")
 
+        if have_scores > 0:
+            max_ap_only_score = max(
+                (
+                    cast(float, pred.score)  # this is guaranteed by have_scores > 0
+                    for predictions in docid_to_predictions.values()
+                    for pred in predictions
+                    if pred.use_only_for_ap and pred.score is not None
+                ),
+                default=0,
+            )
+            min_not_ap_only_score = max(
+                (
+                    cast(float, pred.score)  # this is guaranteed by have_scores > 0
+                    for predictions in docid_to_predictions.values()
+                    for pred in predictions
+                    if not pred.use_only_for_ap and pred.score is not None
+                ),
+                default=1,
+            )
+            if max_ap_only_score > min_not_ap_only_score:
+                logger.warning(
+                    "Found a prediction with use_only_for_ap=True that has a higher score "
+                    f"({max_ap_only_score}) than another prediction with use_only_for_ap=False "
+                    f"({min_not_ap_only_score}). Note that all predictions with "
+                    "use_only_for_ap=True will be used (matched, counted in AP) only after all of "
+                    "the predictions with use_only_for_ap=False anyway."
+                )
+
         extra = len(set(docid_to_predictions.keys()).difference(dataset.docids))
         missing = len(set(dataset.docids).difference(docid_to_predictions.keys()))
         if extra:
@@ -362,7 +362,7 @@ def _sort_predictions(docid_to_matching: Mapping[str, FieldMatching]) -> Sequenc
     for docid, matching in docid_to_matching.items():
         for pred_i, (pred, gold) in enumerate(matching.ordered_predictions_with_match):
             sort_key_prediction_matched.append(
-                (_get_prediction_sort_key(pred.score, pred_i, docid), gold is not None)
+                (_get_prediction_sort_key(pred.normalized_score, pred_i, docid), gold is not None)
             )
         total_annotations += len(matching.annotations)
 
@@ -372,9 +372,7 @@ def _sort_predictions(docid_to_matching: Mapping[str, FieldMatching]) -> Sequenc
     ]
 
 
-def _get_prediction_sort_key(
-    score: Optional[float], prediction_i: int, docid: str
-) -> PredictionSortKey:
+def _get_prediction_sort_key(score: float, prediction_i: int, docid: str) -> PredictionSortKey:
     """
     Get a sort key for a prediction.
 
@@ -398,8 +396,6 @@ def _get_prediction_sort_key(
     -------
     A tuple whose ordering corresponds to the criteria described above.
     """
-    if score is None:
-        score = 1
     hashed_docid = hashlib.sha1(docid.encode())
     hashed_docid.update(prediction_i.to_bytes(8, "little"))
     return (-score, prediction_i, hashed_docid.hexdigest()[:16])

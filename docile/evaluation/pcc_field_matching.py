@@ -66,6 +66,44 @@ class FieldMatching:
             false_negatives=annotations,
         )
 
+    def filter(
+        self, same_text: bool = False, fieldtype: str = "", exclude_only_for_ap: bool = False
+    ) -> "FieldMatching":
+        """
+        Filter matching based on the given options.
+
+        Parameters
+        ----------
+        same_text
+            If true, unmatch predictions whose text does not exactly match the ground truth in the
+            matched annotation.
+        fieldtype
+            If nonempty only keep predictions and annotations with the specified fieldtype.
+        exclude_only_for_ap
+            Remove all predictions with the flag `use_only_for_ap`.
+        """
+
+        def is_fieldtype_ok(ft: Optional[str]) -> bool:
+            return fieldtype == "" or ft == fieldtype
+
+        new_false_negatives = [
+            gold for gold in self.false_negatives if is_fieldtype_ok(gold.fieldtype)
+        ]
+        new_ordered_predictions_with_match: List[Tuple[Field, Optional[Field]]] = []
+        for pred, gold in self.ordered_predictions_with_match:
+            if not is_fieldtype_ok(pred.fieldtype):
+                continue
+            if exclude_only_for_ap and pred.use_only_for_ap:
+                if gold is not None:
+                    new_false_negatives.append(gold)
+                continue
+            if gold is not None and same_text and pred.text != gold.text:
+                new_false_negatives.append(gold)
+                new_ordered_predictions_with_match.append((pred, None))
+            else:
+                new_ordered_predictions_with_match.append((pred, gold))
+        return self.__class__(new_ordered_predictions_with_match, new_false_negatives)
+
 
 def pccs_iou(pcc_set: PCCSet, gold_bbox: BBox, pred_bbox: BBox, page: int) -> float:
     """Calculate IOU over Pseudo Character Centers."""
@@ -106,10 +144,6 @@ def get_matches(
         Necessary 'intersection / union' to accept a pair of fields as a match. The official
         evaluation uses threshold 1.0 but lower thresholds can be used for debugging.
     """
-    have_scores = sum(1 for f in predictions if f.score is not None)
-    if have_scores > 0 and have_scores < len(predictions):
-        raise ValueError("Either all or no predictions need to have scores")
-
     fieldtype_page_to_annotations = defaultdict(lambda: defaultdict(list))
     for a in annotations:
         fieldtype_page_to_annotations[a.fieldtype][a.page].append(a)
@@ -145,7 +179,4 @@ def get_matches(
 def _sort_by_score(pred_with_index: Tuple[int, Field]) -> Tuple[float, int]:
     """Sort predictions by score, use original order for equal scores."""
     pred_i, pred = pred_with_index
-    score = pred.score
-    if score is None:
-        score = 1
-    return (-score, pred_i)
+    return (-pred.normalized_score, pred_i)
