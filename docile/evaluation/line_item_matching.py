@@ -14,7 +14,7 @@ class LineItemsGraph:
 
     Each edge holds the information about the field matching between the two line items. The graph
     is used to find the maximum matching between line items that is maximizing the overall number
-    of matched fields.
+    of matched fields (after excluding predictions with flag `use_only_for_ap`).
     """
 
     def __init__(
@@ -27,10 +27,12 @@ class LineItemsGraph:
         self.G.add_nodes_from(self.gold_nodes)
 
     def add_edge(self, pred_li_i: int, gold_li_i: int, field_matching: FieldMatching) -> None:
+        # Only count predictions without the `use_only_for_ap` flag.
+        main_prediction_matches = len(field_matching.filter(exclude_only_for_ap=True).matches)
         self.G.add_edge(
             (0, pred_li_i),
             (1, gold_li_i),
-            weight=-len(field_matching.matches),
+            weight=-main_prediction_matches,
             field_matching=field_matching,
         )
 
@@ -55,7 +57,8 @@ class LineItemsGraph:
             pred_node[1]: gold_node[1]  # remove the bipartition id part
             for pred_node, gold_node in maximum_matching.items()
             # keep only edges from pred to gold and if they have non-empty field matching
-            if pred_node[0] == 0 and self.G.edges[pred_node, gold_node]["weight"] != 0
+            if pred_node[0] == 0
+            and len(self.get_pair_field_matching(pred_node[1], gold_node[1]).matches) != 0
         }
 
 

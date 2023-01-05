@@ -2,7 +2,68 @@ import pytest
 
 from docile.dataset import BBox, Field
 from docile.evaluation.pcc import PCC, PCCSet
-from docile.evaluation.pcc_field_matching import get_matches, pccs_iou
+from docile.evaluation.pcc_field_matching import FieldMatching, get_matches, pccs_iou
+
+
+def test_filter_field_matching() -> None:
+    bbox = BBox(0, 0, 1, 1)
+    field_f1_no_text = Field(bbox, page=0, fieldtype="f1")
+    field_f1_text_a = Field(bbox, page=0, fieldtype="f1", text="a")
+    field_f1_text_b = Field(bbox, page=0, fieldtype="f1", text="b", use_only_for_ap=True)
+    field_f2 = Field(bbox, page=0, fieldtype="f2", text="x")
+    field_matching = FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, field_f1_text_a),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, field_f1_text_a),
+            (field_f1_text_b, None),
+            (field_f2, field_f2),
+        ],
+        false_negatives=[field_f2, field_f1_text_a],
+    )
+
+    assert field_matching.filter() == field_matching
+    assert field_matching.filter(same_text=True) == FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, None),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, None),
+            (field_f1_text_b, None),
+            (field_f2, field_f2),
+        ],
+        false_negatives=[field_f2, field_f1_text_a, field_f1_text_a, field_f1_text_a],
+    )
+    assert field_matching.filter(fieldtype="f1") == FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, field_f1_text_a),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, field_f1_text_a),
+            (field_f1_text_b, None),
+        ],
+        false_negatives=[field_f1_text_a],
+    )
+    assert field_matching.filter(same_text=True, fieldtype="f1") == FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, None),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f1_text_b, None),
+            (field_f1_text_b, None),
+        ],
+        false_negatives=[field_f1_text_a, field_f1_text_a, field_f1_text_a],
+    )
+    assert field_matching.filter(exclude_only_for_ap=True) == FieldMatching(
+        ordered_predictions_with_match=[
+            (field_f1_no_text, None),
+            (field_f1_no_text, field_f1_text_a),
+            (field_f1_text_a, field_f1_text_a),
+            (field_f2, field_f2),
+        ],
+        false_negatives=[field_f2, field_f1_text_a, field_f1_text_a],
+    )
 
 
 def test_pccs_iou() -> None:
