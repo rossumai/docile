@@ -17,4 +17,4 @@ def sample_dataset_path() -> Path:
 
 @pytest.fixture
 def sample_dataset(sample_dataset_path: Path) -> Dataset:
-    return Dataset.from_file("dev", sample_dataset_path)
+    return Dataset("dev", sample_dataset_path)
