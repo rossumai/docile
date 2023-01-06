@@ -26,6 +26,15 @@ class DocumentAnnotation(CachedObject[Dict]):
     def li_fields(self) -> List[Field]:
         return [Field.from_dict(a) for a in self.content["line_item_extractions"]]
 
+    @property
+    def cluster_id(self) -> int:
+        """
+        Id of the cluster the document belongs to.
+
+        Cluster represents a group of documents with the same layout.
+        """
+        return self.content["metadata"]["cluster_id"]
+
     def get_table_bbox(self, page: int) -> Optional[BBox]:
         """
         Get bounding box of the whole table.

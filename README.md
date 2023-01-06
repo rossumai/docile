@@ -72,7 +72,7 @@ from docile.evaluation import evaluate_dataset
 
 DATASET_PATH = Path("data/docile")
 # example: take only first 10 documents for debugging
-dataset_train = Dataset.from_file("train", DATASET_PATH)[:10]
+dataset_train = Dataset("train", DATASET_PATH)[:10]
 
 for document in dataset_train:
     kile_fields = document.annotation.fields
@@ -86,7 +86,7 @@ for document in dataset_train:
 
 # ...Train here...
 
-dataset_test = Dataset.from_file("test", DATASET_PATH)
+dataset_test = Dataset("test", DATASET_PATH)
 docid_to_kile_predictions = {}
 docid_to_lir_predictions = {}
 for document in dataset_test:
