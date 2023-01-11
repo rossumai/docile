@@ -3,6 +3,7 @@ from docile.dataset.cached_object import CachingConfig
 from docile.dataset.dataset import Dataset
 from docile.dataset.document import Document
 from docile.dataset.field import Field
+from docile.dataset.table_grid import TableGrid
 
 KILE_FIELDTYPES = [
     "account_num",
@@ -73,4 +74,5 @@ __all__ = [
     "Field",
     "KILE_FIELDTYPES",
     "LIR_FIELDYPES",
+    "TableGrid",
 ]
