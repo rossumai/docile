@@ -698,159 +698,146 @@
     "language": "eng",
     "original_filename": "nkvc0055",
     "page_count": 1,
-    "page_shapes": [
-      [
-        1240,
-        1645
-      ]
-    ],
-    "page_to_table_grids": {
-      "1": [
-        {
-          "columns": [
-            {
-              "column_type": null,
-              "left_position": 133
-            },
-            {
-              "column_type": "line_item_quantity",
-              "left_position": 156
-            },
-            {
-              "column_type": null,
-              "left_position": 175
-            },
-            {
-              "column_type": "line_item_code",
-              "left_position": 220
-            },
-            {
-              "column_type": null,
-              "left_position": 278
-            },
-            {
-              "column_type": "line_item_description",
-              "left_position": 331
-            },
-            {
-              "column_type": null,
-              "left_position": 571
-            },
-            {
-              "column_type": "line_item_quantity",
-              "left_position": 603
-            },
-            {
-              "column_type": null,
-              "left_position": 630
-            },
-            {
-              "column_type": null,
-              "left_position": 656
-            },
-            {
-              "column_type": null,
-              "left_position": 680
-            },
-            {
-              "column_type": "line_item_quantity",
-              "left_position": 775
-            },
-            {
-              "column_type": null,
-              "left_position": 832
-            },
-            {
-              "column_type": "line_item_unit_price_gross",
-              "left_position": 880
-            },
-            {
-              "column_type": null,
-              "left_position": 941
-            },
-            {
-              "column_type": "line_item_amount_gross",
-              "left_position": 1017
-            },
-            {
-              "column_type": null,
-              "left_position": 1105
-            }
-          ],
-          "height": 844,
-          "rows": [
-            {
-              "row_type": "header",
-              "top_position": 579
-            },
-            {
-              "row_type": "gap",
-              "top_position": 610
-            },
-            {
-              "row_type": "data",
-              "top_position": 639
-            },
-            {
-              "row_type": "data",
-              "top_position": 659
-            },
-            {
-              "row_type": "gap",
-              "top_position": 678
-            },
-            {
-              "row_type": "data",
-              "top_position": 691
-            },
-            {
-              "row_type": "data",
-              "top_position": 711
-            },
-            {
-              "row_type": "gap",
-              "top_position": 731
-            },
-            {
-              "row_type": "data",
-              "top_position": 764
-            },
-            {
-              "row_type": "data",
-              "top_position": 783
-            },
-            {
-              "row_type": "gap",
-              "top_position": 803
-            },
-            {
-              "row_type": "data",
-              "top_position": 815
-            },
-            {
-              "row_type": "data",
-              "top_position": 835
-            },
-            {
-              "row_type": "gap",
-              "top_position": 854
-            },
-            {
-              "row_type": null,
-              "top_position": 1113
-            },
-            {
-              "row_type": "gap",
-              "top_position": 1302
-            },
-            {
-              "row_type": "footer",
-              "top_position": 1353
-            }
-          ],
-          "width": 999
-        }
-      ]
+    "page_to_table_grid": {
+      "0": {
+        "bbox": [
+          0.10725806451612903,
+          0.3519756838905775,
+          0.9129032258064517,
+          0.8650455927051671
+        ],
+        "columns": [
+          {
+            "column_type": "line_item_quantity",
+            "left": 0.12580645161290321,
+            "right": 0.14112903225806453
+          },
+          {
+            "column_type": "line_item_code",
+            "left": 0.1774193548387097,
+            "right": 0.22419354838709676
+          },
+          {
+            "column_type": "line_item_description",
+            "left": 0.2669354838709677,
+            "right": 0.46048387096774196
+          },
+          {
+            "column_type": "line_item_quantity",
+            "left": 0.48629032258064514,
+            "right": 0.5080645161290323
+          },
+          {
+            "column_type": "",
+            "left": 0.5290322580645161,
+            "right": 0.5483870967741935
+          },
+          {
+            "column_type": "line_item_quantity",
+            "left": 0.625,
+            "right": 0.6709677419354839
+          },
+          {
+            "column_type": "line_item_unit_price_gross",
+            "left": 0.7096774193548387,
+            "right": 0.7588709677419355
+          },
+          {
+            "column_type": "line_item_amount_gross",
+            "left": 0.8201612903225807,
+            "right": 0.8911290322580645
+          }
+        ],
+        "missing_columns": false,
+        "missing_second_table_on_page": false,
+        "rows": [
+          {
+            "bottom": 0.3708206686930091,
+            "row_type": "header",
+            "top": 0.3519756838905775
+          },
+          {
+            "bottom": 0.3884498480243161,
+            "row_type": "gap",
+            "top": 0.3708206686930091
+          },
+          {
+            "bottom": 0.4006079027355623,
+            "row_type": "data",
+            "top": 0.3884498480243161
+          },
+          {
+            "bottom": 0.4121580547112462,
+            "row_type": "data",
+            "top": 0.4006079027355623
+          },
+          {
+            "bottom": 0.42006079027355625,
+            "row_type": "gap",
+            "top": 0.4121580547112462
+          },
+          {
+            "bottom": 0.43221884498480245,
+            "row_type": "data",
+            "top": 0.42006079027355625
+          },
+          {
+            "bottom": 0.44437689969604866,
+            "row_type": "data",
+            "top": 0.43221884498480245
+          },
+          {
+            "bottom": 0.4644376899696049,
+            "row_type": "gap",
+            "top": 0.44437689969604866
+          },
+          {
+            "bottom": 0.47598784194528876,
+            "row_type": "data",
+            "top": 0.4644376899696049
+          },
+          {
+            "bottom": 0.48814589665653496,
+            "row_type": "data",
+            "top": 0.47598784194528876
+          },
+          {
+            "bottom": 0.49544072948328266,
+            "row_type": "gap",
+            "top": 0.48814589665653496
+          },
+          {
+            "bottom": 0.5075987841945289,
+            "row_type": "data",
+            "top": 0.49544072948328266
+          },
+          {
+            "bottom": 0.5191489361702127,
+            "row_type": "data",
+            "top": 0.5075987841945289
+          },
+          {
+            "bottom": 0.676595744680851,
+            "row_type": "gap",
+            "top": 0.5191489361702127
+          },
+          {
+            "bottom": 0.7914893617021277,
+            "row_type": "unknown",
+            "top": 0.676595744680851
+          },
+          {
+            "bottom": 0.8224924012158055,
+            "row_type": "gap",
+            "top": 0.7914893617021277
+          },
+          {
+            "bottom": 0.8650455927051671,
+            "row_type": "footer",
+            "top": 0.8224924012158055
+          }
+        ]
+      }
     },
     "source": "ucsf",
     "table_structure": "normal"
