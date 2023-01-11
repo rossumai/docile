@@ -1,8 +1,24 @@
+from enum import Enum, auto
 from pathlib import Path
 from types import TracebackType
 from typing import Generic, Optional, Type, TypeVar
 
 CT = TypeVar("CT")
+
+
+class CachingConfig(Enum):
+    OFF = auto()
+    DISK = auto()
+    MEMORY = auto()
+    DISK_AND_MEMORY = auto()
+
+    @property
+    def disk_cache(self) -> bool:
+        return self in [self.DISK, self.DISK_AND_MEMORY]
+
+    @property
+    def memory_cache(self) -> bool:
+        return self in [self.MEMORY, self.DISK_AND_MEMORY]
 
 
 class CachedObject(Generic[CT]):
@@ -15,21 +31,17 @@ class CachedObject(Generic[CT]):
     You can temporarily turn on memory caching by entering the object as a context manager.
     """
 
-    def __init__(
-        self,
-        path: Path,
-        mem_cache: bool = False,
-        disk_cache: bool = True,
-    ):
+    def __init__(self, path: Path, cache: CachingConfig):
+        # initialize in-memory cache
         self._content: Optional[CT] = None
 
         self.path = path
-        self.mem_cache_permanent = mem_cache
-        self.mem_cache = mem_cache
-        self.disk_cache = disk_cache
+        self.memory_cache_permanent = cache.memory_cache
+        self.memory_cache = cache.memory_cache
+        self.disk_cache = cache.disk_cache
 
     def __enter__(self) -> "CachedObject":
-        self.mem_cache = True
+        self.memory_cache = True
         return self
 
     def __exit__(
@@ -38,8 +50,8 @@ class CachedObject(Generic[CT]):
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        if not self.mem_cache_permanent:
-            self.mem_cache = False
+        if not self.memory_cache_permanent:
+            self.memory_cache = False
             self._content = None
 
     def from_disk(self) -> CT:
@@ -52,7 +64,7 @@ class CachedObject(Generic[CT]):
         raise NotImplementedError
 
     def overwrite(self, content: CT) -> None:
-        if self.mem_cache:
+        if self.memory_cache:
             self._content = content
         if self.disk_cache:
             self.to_disk(content)
@@ -65,11 +77,11 @@ class CachedObject(Generic[CT]):
     @property
     def content(self) -> CT:
         """Try to load the content from cache."""
-        if self.mem_cache and self._content is not None:
+        if self.memory_cache and self._content is not None:
             return self._content
         if self.disk_cache and self.path.exists():
             content = self.from_disk()
-            if self.mem_cache:
+            if self.memory_cache:
                 self._content = content
             return content
 

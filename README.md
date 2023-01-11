@@ -66,13 +66,11 @@ If you wish to (re)generate OCR from scratch (e.g., on a different dataset), del
 Assuming you have your dataset in `data/docile/` with two splits `data/docile/train.json` and `data/docile/test.json`:
 
 ```python
-from pathlib import Path
 from docile.dataset import Dataset
 from docile.evaluation import evaluate_dataset
 
-DATASET_PATH = Path("data/docile")
-# example: take only first 10 documents for debugging
-dataset_train = Dataset("train", DATASET_PATH)[:10]
+# example: take only 10 documents for debugging
+dataset_train = Dataset("train", "data/docile").sample(10, seed=42)
 
 for document in dataset_train:
     kile_fields = document.annotation.fields
@@ -86,7 +84,7 @@ for document in dataset_train:
 
 # ...Train here...
 
-dataset_test = Dataset("test", DATASET_PATH)
+dataset_test = Dataset("test", "data/docile")
 docid_to_kile_predictions = {}
 docid_to_lir_predictions = {}
 for document in dataset_test:
@@ -97,4 +95,22 @@ for document in dataset_test:
 
 evaluation_result = evaluate_dataset(dataset_test, docid_to_kile_predictions, docid_to_lir_predictions)
 print(evaluation_result.print_report(include_same_text=True))
+```
+
+When working with a large dataset, such as the unlabeled dataset, do not load the whole dataset to memory:
+
+```python
+from docile.dataset import CachingConfig, Dataset
+
+dataset_unlabeled = Dataset(
+    split_name="pretraining-all",
+    dataset_path="data/docile-unlabeled",
+    load_annotations=False,
+    load_ocr=False,
+    cache_images=CachingConfig.OFF,
+)
+for document in dataset_unlabeled:
+    # temporarily cache document resources in memory.
+    with document:
+        # process document here
 ```

@@ -3,13 +3,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from docile.dataset.bbox import BBox
-from docile.dataset.cached_object import CachedObject
+from docile.dataset.cached_object import CachedObject, CachingConfig
 from docile.dataset.field import Field
 
 
 class DocumentAnnotation(CachedObject[Dict]):
-    def __init__(self, path: Path) -> None:
-        super().__init__(path=path, mem_cache=False, disk_cache=True)
+    def __init__(self, path: Path, cache: CachingConfig = CachingConfig.DISK) -> None:
+        super().__init__(path=path, cache=cache)
 
     def from_disk(self) -> Dict[str, Any]:
         return json.loads(self.path.read_text())

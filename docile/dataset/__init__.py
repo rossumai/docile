@@ -1,4 +1,5 @@
 from docile.dataset.bbox import BBox
+from docile.dataset.cached_object import CachingConfig
 from docile.dataset.dataset import Dataset
 from docile.dataset.document import Document
 from docile.dataset.field import Field
@@ -64,4 +65,12 @@ LIR_FIELDYPES = [
     "line_item_weight",
 ]
 
-__all__ = ["BBox", "Dataset", "Document", "Field", "KILE_FIELDTYPES", "LIR_FIELDYPES"]
+__all__ = [
+    "BBox",
+    "CachingConfig",
+    "Dataset",
+    "Document",
+    "Field",
+    "KILE_FIELDTYPES",
+    "LIR_FIELDYPES",
+]

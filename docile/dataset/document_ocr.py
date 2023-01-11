@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 from docile.dataset.bbox import BBox
-from docile.dataset.cached_object import CachedObject
+from docile.dataset.cached_object import CachedObject, CachingConfig
 from docile.dataset.field import Field
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 class DocumentOCR(CachedObject[Dict]):
     _model = None
 
-    def __init__(self, path: Path, pdf_path: Path) -> None:
-        super().__init__(path=path, mem_cache=False, disk_cache=True)
+    def __init__(
+        self, path: Path, pdf_path: Path, cache: CachingConfig = CachingConfig.DISK
+    ) -> None:
+        super().__init__(path=path, cache=cache)
         self.pdf_path = pdf_path
 
     def from_disk(self) -> Dict:
