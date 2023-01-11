@@ -89,10 +89,6 @@ class Dataset:
         ]
         self._set_documents(documents)
 
-        # store these options to allow easily swapping to a different dataset split later using the
-        # same cofnig.
-        self.load_annotations = load_annotations
-        self.load_ocr = load_ocr
         self.cache_images = cache_images
 
     @property
@@ -103,20 +99,32 @@ class Dataset:
     def docids(self) -> List[str]:
         return [doc.docid for doc in self.documents]
 
-    def load_split(self, split_name: str) -> "Dataset":
-        """Load a different split for the current dataset, using the same config for caching."""
+    def load_split(self, split_name: str, load_annotations_and_ocr: bool = True) -> "Dataset":
+        """
+        Load a different split for the current dataset, using the same config for image caching.
+
+        If you want to only load annotations and not OCR, use the main constructor instead.
+
+        Parameters
+        ----------
+        split_name
+            Name of the dataset split to load.
+        load_annotations_and_ocr
+            Preload annotations and OCR to memory.
+        """
         return self.__class__(
             split_name=split_name,
             dataset_path=self.dataset_path,
-            load_annotations=self.load_annotations,
-            load_ocr=self.load_ocr,
+            load_annotations=load_annotations_and_ocr,
+            load_ocr=load_annotations_and_ocr,
             cache_images=self.cache_images,
         )
 
     def get_cluster(self, cluster_id: int) -> "Dataset":
-        return self.create_dataset_from_documents(
+        return self.from_documents(
             split_name=f"{self.split_name}[cluster_id={cluster_id}]",
             documents=[doc for doc in self.documents if doc.annotation.cluster_id == cluster_id],
+            cache_images=self.cache_images,
         )
 
     @overload
@@ -146,9 +154,10 @@ class Dataset:
                 str_slice = f"{str_start}:{str_stop}"
             else:
                 str_slice = f"{str_start}:{str_stop}:{id_or_pos_or_slice.step}"
-            return self.create_dataset_from_documents(
+            return self.from_documents(
                 split_name=f"{self.split_name}[{str_slice}]",
                 documents=self.documents[id_or_pos_or_slice],
+                cache_images=self.cache_images,
             )
         if isinstance(id_or_pos_or_slice, str):
             return self.documents[self.docid_to_index[id_or_pos_or_slice]]
@@ -172,7 +181,7 @@ class Dataset:
         rng = Random(seed)
         sample_documents = rng.sample(self.documents, sample_size)
         split_name = f"{self.split_name}[sample({sample_size},seed={seed})]"
-        return self.create_dataset_from_documents(split_name, sample_documents)
+        return self.from_documents(split_name, sample_documents, self.cache_images)
 
     def __iter__(self) -> Iterable[Document]:
         return iter(self.documents)
@@ -186,8 +195,12 @@ class Dataset:
     def __repr__(self) -> str:
         return f'Dataset(split_name="{self.split_name}", dataset_path="{self.dataset_path}")'
 
-    def create_dataset_from_documents(
-        self, split_name: str, documents: Sequence[Document]
+    @classmethod
+    def from_documents(
+        cls,
+        split_name: str,
+        documents: Sequence[Document],
+        cache_images: CachingConfig = CachingConfig.DISK,
     ) -> "Dataset":
         """
         Create a dataset directly from documents, rather than from docids.
@@ -195,17 +208,19 @@ class Dataset:
         This is useful when the documents were already loaded once, e.g., when creating a dataset
         with just a sample of the current documents.
         """
-        dataset = self.__class__(
+        if len(documents) == 0:
+            raise ValueError("Cannot create a dataset with no documents")
+
+        dataset_path = documents[0].dataset_paths.dataset_path
+        dataset = cls(
             split_name=split_name,
-            dataset_path=self.dataset_path,
+            dataset_path=dataset_path,
             docids=[doc.docid for doc in documents],
             # Do not load annotations and OCR since it might be already loaded once in `documents`.
             load_annotations=False,
             load_ocr=False,
-            cache_images=self.cache_images,
+            cache_images=cache_images,
         )
-        dataset.load_annotations = self.load_annotations
-        dataset.load_ocr = self.load_ocr
         dataset._set_documents(documents)
         return dataset
 
