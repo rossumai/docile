@@ -1,10 +1,11 @@
 from pathlib import Path
+from typing import Union
 
 from docile.dataset.types import OptionalImageSize
 
 
 class DataPaths:
-    def __init__(self, dataset_path: Path):
+    def __init__(self, dataset_path: Union[Path, str]):
         self.dataset_path = Path(dataset_path)
 
     def dataset_index_path(self, split_name: str) -> Path:

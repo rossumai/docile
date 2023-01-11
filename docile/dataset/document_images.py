@@ -5,7 +5,7 @@ from typing import List
 from pdf2image import convert_from_path
 from PIL import Image
 
-from docile.dataset.cached_object import CachedObject
+from docile.dataset.cached_object import CachedObject, CachingConfig
 from docile.dataset.paths import DataPaths
 from docile.dataset.types import OptionalImageSize
 
@@ -14,7 +14,12 @@ logger = logging.getLogger(__name__)
 
 class DocumentImages(CachedObject[List[Image.Image]]):
     def __init__(
-        self, path: Path, pdf_path: Path, page_count: int, size: OptionalImageSize = (None, None)
+        self,
+        path: Path,
+        pdf_path: Path,
+        page_count: int,
+        size: OptionalImageSize = (None, None),
+        cache: CachingConfig = CachingConfig.OFF,
     ):
         """
         Convert PDF Document to images for its pages.
@@ -30,8 +35,10 @@ class DocumentImages(CachedObject[List[Image.Image]]):
         size
             Check https://pdf2image.readthedocs.io/en/latest/reference.html for documentation of
             this parameter.
+        cache
+            Whether to cache images generated from pdfs to disk and/or to memory.
         """
-        super().__init__(path=path, mem_cache=False, disk_cache=True)
+        super().__init__(path=path, cache=cache)
         self.pdf_path = pdf_path
         self.page_count = page_count
         self.size = size
