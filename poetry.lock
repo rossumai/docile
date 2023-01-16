@@ -970,6 +970,28 @@ files = [
 ]
 
 [[package]]
+name = "ipywidgets"
+version = "8.0.4"
+description = "Jupyter interactive widgets"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "ipywidgets-8.0.4-py3-none-any.whl", hash = "sha256:ebb195e743b16c3947fe8827190fb87b4d00979c0fbf685afe4d2c4927059fa1"},
+    {file = "ipywidgets-8.0.4.tar.gz", hash = "sha256:c0005a77a47d77889cafed892b58e33b4a2a96712154404c6548ec22272811ea"},
+]
+
+[package.dependencies]
+ipykernel = ">=4.5.1"
+ipython = ">=6.1.0"
+jupyterlab-widgets = ">=3.0,<4.0"
+traitlets = ">=4.3.1"
+widgetsnbextension = ">=4.0,<5.0"
+
+[package.extras]
+test = ["jsonschema", "pytest (>=3.6.0)", "pytest-cov", "pytz"]
+
+[[package]]
 name = "jedi"
 version = "0.18.2"
 description = "An autocompletion tool for Python that can be used for text editors."
@@ -1185,6 +1207,18 @@ requests = "*"
 docs = ["autodoc-traits", "docutils (<0.19)", "jinja2 (<3.1.0)", "mistune (<1)", "myst-parser", "pydata-sphinx-theme", "sphinx", "sphinx-copybutton", "sphinxcontrib-openapi"]
 openapi = ["openapi-core (>=0.14.2)", "ruamel-yaml"]
 test = ["codecov", "ipykernel", "jupyter-server[test]", "openapi-core (>=0.14.2,<0.15.0)", "openapi-spec-validator (<0.5)", "pytest (>=7.0)", "pytest-console-scripts", "pytest-cov", "requests-mock", "ruamel-yaml", "strict-rfc3339"]
+
+[[package]]
+name = "jupyterlab-widgets"
+version = "3.0.5"
+description = "Jupyter interactive widgets for JupyterLab"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "jupyterlab_widgets-3.0.5-py3-none-any.whl", hash = "sha256:a04a42e50231b355b7087e16a818f541e53589f7647144ea0344c4bf16f300e5"},
+    {file = "jupyterlab_widgets-3.0.5.tar.gz", hash = "sha256:eeaecdeaf6c03afc960ddae201ced88d5979b4ca9c3891bcb8f6631af705f5ef"},
+]
 
 [[package]]
 name = "kiwisolver"
@@ -1940,6 +1974,21 @@ files = [
 [package.extras]
 docs = ["furo (>=2021.7.5b38)", "proselint (>=0.10.2)", "sphinx (>=4)", "sphinx-autodoc-typehints (>=1.12)"]
 test = ["appdirs (==1.4.4)", "pytest (>=6)", "pytest-cov (>=2.7)", "pytest-mock (>=3.6)"]
+
+[[package]]
+name = "plotly"
+version = "5.12.0"
+description = "An open-source, interactive data visualization library for Python"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "plotly-5.12.0-py2.py3-none-any.whl", hash = "sha256:ed8136cc084386044e6e3353d74ad4888b85efa1fa4d1c98fe0f97becb0507a9"},
+    {file = "plotly-5.12.0.tar.gz", hash = "sha256:8bf1b37a1e3cb260a4aa77ab79c9db4fd0ad3ccd66463c3a3e8a5300196ec61e"},
+]
+
+[package.dependencies]
+tenacity = ">=6.2.0"
 
 [[package]]
 name = "pluggy"
@@ -2843,6 +2892,21 @@ files = [
 widechars = ["wcwidth"]
 
 [[package]]
+name = "tenacity"
+version = "8.1.0"
+description = "Retry code until it succeeds"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "tenacity-8.1.0-py3-none-any.whl", hash = "sha256:35525cd47f82830069f0d6b73f7eb83bc5b73ee2fff0437952cedf98b27653ac"},
+    {file = "tenacity-8.1.0.tar.gz", hash = "sha256:e48c437fdf9340f5666b92cd7990e96bc5fc955e1298baf4a907e3972067a445"},
+]
+
+[package.extras]
+doc = ["reno", "sphinx", "tornado (>=4.5)"]
+
+[[package]]
 name = "terminado"
 version = "0.17.0"
 description = "Tornado websocket backend for the Xterm.js Javascript terminal emulator library."
@@ -3166,6 +3230,18 @@ optional = ["python-socks", "wsaccel"]
 test = ["websockets"]
 
 [[package]]
+name = "widgetsnbextension"
+version = "4.0.5"
+description = "Jupyter interactive widgets for Jupyter Notebook"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "widgetsnbextension-4.0.5-py3-none-any.whl", hash = "sha256:eaaaf434fb9b08bd197b2a14ffe45ddb5ac3897593d43c69287091e5f3147bf7"},
+    {file = "widgetsnbextension-4.0.5.tar.gz", hash = "sha256:003f716d930d385be3fd9de42dd9bf008e30053f73bddde235d14fbeaeff19af"},
+]
+
+[[package]]
 name = "zipp"
 version = "3.10.0"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -3245,4 +3321,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "b4bbeeeca1200ddc3a5bd4837c181932b8f1e355cb458b19a4e479d23e6532d8"
+content-hash = "a369ee6ffa9802c5299edc298bb1e924182217c2b8c0971a9ec819f4f899a5e1"

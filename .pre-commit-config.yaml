@@ -45,11 +45,8 @@ repos:
     rev: v2.2.2
     hooks:
       - id: codespell
-        exclude: >
-          (?x)^(
-            .*\.ipynb|
-            tests/data/.*/.*/.*|
-          )$
+        additional_dependencies:
+          - tomli
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.10.1
