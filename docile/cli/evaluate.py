@@ -17,9 +17,9 @@ from docile.evaluation import evaluate_dataset
 @click.option(
     "-d",
     "--dataset-path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    type=click.Path(exists=True, file_okay=True, dir_okay=True, path_type=Path),
     required=True,
-    help="path to the unzipped dataset",
+    help="path to the zip with dataset or unzipped dataset",
 )
 @click.option(
     "-s",

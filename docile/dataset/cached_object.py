@@ -1,7 +1,8 @@
 from enum import Enum, auto
-from pathlib import Path
 from types import TracebackType
 from typing import Generic, Optional, Type, TypeVar
+
+from docile.dataset.paths import PathMaybeInZip
 
 CT = TypeVar("CT")
 
@@ -31,7 +32,7 @@ class CachedObject(Generic[CT]):
     You can temporarily turn on memory caching by entering the object as a context manager.
     """
 
-    def __init__(self, path: Path, cache: CachingConfig):
+    def __init__(self, path: PathMaybeInZip, cache: CachingConfig):
         # initialize in-memory cache
         self._content: Optional[CT] = None
 
@@ -67,6 +68,8 @@ class CachedObject(Generic[CT]):
         if self.memory_cache:
             self._content = content
         if self.disk_cache:
+            if self.path.is_in_zip():
+                raise RuntimeError(f"Cannot write to disk cache since path {self.path} is in ZIP")
             self.to_disk(content)
 
     def predict_and_overwrite(self) -> CT:

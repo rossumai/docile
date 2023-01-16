@@ -1,12 +1,11 @@
 import logging
-from pathlib import Path
 from typing import List
 
-from pdf2image import convert_from_path
+from pdf2image import convert_from_bytes
 from PIL import Image
 
 from docile.dataset.cached_object import CachedObject, CachingConfig
-from docile.dataset.paths import DataPaths
+from docile.dataset.paths import DataPaths, PathMaybeInZip
 from docile.dataset.types import OptionalImageSize
 
 logger = logging.getLogger(__name__)
@@ -15,8 +14,8 @@ logger = logging.getLogger(__name__)
 class DocumentImages(CachedObject[List[Image.Image]]):
     def __init__(
         self,
-        path: Path,
-        pdf_path: Path,
+        path: PathMaybeInZip,
+        pdf_path: PathMaybeInZip,
         page_count: int,
         size: OptionalImageSize = (None, None),
         cache: CachingConfig = CachingConfig.OFF,
@@ -60,13 +59,13 @@ class DocumentImages(CachedObject[List[Image.Image]]):
         return images
 
     def to_disk(self, content: List[Image.Image]) -> None:
-        self.path.mkdir(parents=True, exist_ok=True)
+        self.path.full_path.mkdir(parents=True, exist_ok=True)
         for page_i in range(self.page_count):
             page_path = DataPaths.cache_page_image_path(self.path, page_i)
-            content[page_i].save(str(page_path))
+            content[page_i].save(str(page_path.full_path))
 
     def predict(self) -> List[Image.Image]:
-        images = convert_from_path(self.pdf_path, size=self.size)
+        images = convert_from_bytes(self.pdf_path.read_bytes(), size=self.size)
         if len(images) != self.page_count:
             raise RuntimeError(
                 f"Generated unexpected number of images: {len(images)} (expected: {self.page_count}"

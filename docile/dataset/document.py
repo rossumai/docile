@@ -23,7 +23,7 @@ class Document:
     def __init__(
         self,
         docid: str,
-        dataset_path: Union[Path, str],
+        dataset_path: Union[Path, str, DataPaths],
         load_annotations: bool = True,
         load_ocr: bool = True,
         cache_images: CachingConfig = CachingConfig.DISK,
@@ -45,8 +45,8 @@ class Document:
         docid
             Id of the document.
         dataset_path
-            Path to the root directory containing the dataset, i.e., index files (`train`, `val`,
-            ...) and folders with pdfs, annotations and ocr.
+            Path to the root directory with the unzipped dataset or a path to the ZIP file with the
+            dataset.
         load_annotations
             If true, annotations are loaded to memory.
         load_ocr
@@ -55,19 +55,22 @@ class Document:
             Whether to cache images generated from the pdf to disk and/or to memory.
         """
         self.docid = docid
-        self.dataset_paths = DataPaths(dataset_path)
+        self.data_paths = DataPaths(dataset_path)
+
+        if self.data_paths.is_in_zip() and cache_images.disk_cache:
+            raise ValueError("Cannot use disk cache for images when reading dataset from ZIP file")
 
         cache_annotation = (
             CachingConfig.DISK_AND_MEMORY if load_annotations else CachingConfig.DISK
         )
-        annotation_path = self.dataset_paths.annotation_path(docid)
+        annotation_path = self.data_paths.annotation_path(docid)
         self.annotation = DocumentAnnotation(annotation_path, cache=cache_annotation)
         if load_annotations:
             self.annotation.content
 
         cache_ocr = CachingConfig.DISK_AND_MEMORY if load_ocr else CachingConfig.DISK
-        ocr_path = self.dataset_paths.ocr_path(docid)
-        pdf_path = self.dataset_paths.pdf_path(docid)
+        ocr_path = self.data_paths.ocr_path(docid)
+        pdf_path = self.data_paths.pdf_path(docid)
         self.ocr = DocumentOCR(ocr_path, pdf_path, cache=cache_ocr)
         if load_ocr:
             self.ocr.content
@@ -100,8 +103,8 @@ class Document:
         """
         if image_size not in self.images:
             self.images[image_size] = DocumentImages(
-                path=self.dataset_paths.cache_images_path(self.docid, image_size),
-                pdf_path=self.dataset_paths.pdf_path(self.docid),
+                path=self.data_paths.cache_images_path(self.docid, image_size),
+                pdf_path=self.data_paths.pdf_path(self.docid),
                 page_count=self.page_count,
                 size=image_size,
                 cache=self.cache_images,
@@ -149,7 +152,10 @@ class Document:
         return draw_img
 
     def __str__(self) -> str:
-        return f"Document({self.dataset_paths.dataset_path.name}/{self.docid})"
+        return f"Document({self.data_paths.name}:{self.docid})"
 
     def __repr__(self) -> str:
-        return f"Document(docid={self.docid!r}, dataset_path={self.dataset_paths.dataset_path!r})"
+        return (
+            f"Document(docid={self.docid!r}, "
+            f"dataset_path={self.data_paths.dataset_path.root_path!r})"
+        )

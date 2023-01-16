@@ -20,7 +20,7 @@ class Dataset:
     def __init__(
         self,
         split_name: str,
-        dataset_path: Union[Path, str],
+        dataset_path: Union[Path, str, DataPaths],
         docids: Optional[Sequence[str]] = None,
         load_annotations: bool = True,
         load_ocr: bool = True,
@@ -47,8 +47,8 @@ class Dataset:
             Name of the dataset split. If there is an index file stored in the dataset folder (such
             as for `train`, `val`, `test` or `trainval`), it will be used to load the document ids.
         dataset_path
-            Path to the root directory containing the dataset, i.e., index files (`train`, `val`,
-            ...) and folders with pdfs, annotations and ocr.
+            Path to the root directory with the unzipped dataset or a path to the ZIP file with the
+            dataset.
         docids
             Custom list of document ids that are part of the dataset split.
         load_annotations
@@ -61,7 +61,7 @@ class Dataset:
             the unlabeled dataset).
         """
         self.split_name = split_name
-        self.dataset_path = Path(dataset_path)
+        self.data_paths = DataPaths(dataset_path)
 
         docids_from_file = self._load_docids_from_index(split_name)
         if docids is None and docids_from_file is None:
@@ -78,7 +78,7 @@ class Dataset:
         documents = [
             Document(
                 docid=docid,
-                dataset_path=dataset_path,
+                dataset_path=self.data_paths,
                 load_annotations=load_annotations,
                 load_ocr=load_ocr,
                 cache_images=cache_images,
@@ -93,7 +93,7 @@ class Dataset:
 
     @property
     def name(self) -> str:
-        return f"{self.dataset_path.name}/{self.split_name}"
+        return f"{self.data_paths.name}:{self.split_name}"
 
     @property
     def docids(self) -> List[str]:
@@ -114,7 +114,7 @@ class Dataset:
         """
         return self.__class__(
             split_name=split_name,
-            dataset_path=self.dataset_path,
+            dataset_path=self.data_paths,
             load_annotations=load_annotations_and_ocr,
             load_ocr=load_annotations_and_ocr,
             cache_images=self.cache_images,
@@ -193,7 +193,10 @@ class Dataset:
         return f"Dataset({self.name})"
 
     def __repr__(self) -> str:
-        return f"Dataset(split_name={self.split_name!r}, dataset_path={self.dataset_path!r})"
+        return (
+            f"Dataset(split_name={self.split_name!r}, "
+            f"dataset_path={self.data_paths.dataset_path.root_path!r})"
+        )
 
     @classmethod
     def from_documents(
@@ -211,10 +214,10 @@ class Dataset:
         if len(documents) == 0:
             raise ValueError("Cannot create a dataset with no documents")
 
-        dataset_path = documents[0].dataset_paths.dataset_path
+        data_paths = documents[0].data_paths
         dataset = cls(
             split_name=split_name,
-            dataset_path=dataset_path,
+            dataset_path=data_paths,
             docids=[doc.docid for doc in documents],
             # Do not load annotations and OCR since it might be already loaded once in `documents`.
             load_annotations=False,
@@ -226,7 +229,7 @@ class Dataset:
 
     def store_index(self) -> None:
         """Store dataset index to disk."""
-        index_path = DataPaths(self.dataset_path).dataset_index_path(self.split_name)
+        index_path = self.data_paths.dataset_index_path(self.split_name)
         if index_path.exists():
             raise RuntimeError(
                 f"Index file for {self} already exists at path {index_path}. Delete it first if "
@@ -244,9 +247,9 @@ class Dataset:
         -------
         Docids loaded from the index file or None if the file does not exist.
         """
-        index_path = DataPaths(self.dataset_path).dataset_index_path(split_name)
+        index_path = self.data_paths.dataset_index_path(split_name)
         if index_path.exists():
-            return json.loads(index_path.read_text())
+            return json.loads(index_path.read_bytes())
         return None
 
     def _set_documents(self, documents: Sequence[Document]) -> None:
