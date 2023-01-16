@@ -5,12 +5,12 @@
 
 To evaluate predictions for tasks KILE or LIR, use the following command:
 ```bash
-poetry run evaluate -t KILE -d path/to/dataset/ -s val -p path/to/predictions.json --evaluate-also-text
+poetry run evaluate --task KILE --dataset-path path/to/dataset[.zip] --split val --predictions path/to/predictions.json --evaluate-also-text
 ```
 
 Run `poetry run evaluate --help` for more information on the options.
 
-Predictions need to be stored in a single json file (for each task separately) containing a dictionary from `docid` to the predictions for that document, i.e.:
+Predictions need to be stored in a single json file (for each task separately) containing a mapping from `docid` to the predictions for that document, i.e.:
 ```json
 {
     "docid1": [
@@ -31,7 +31,7 @@ Predictions need to be stored in a single json file (for each task separately) c
 ```
 Explanation of the individual fields of the predictions:
   * `page`: page index (from zero) the prediction belongs to
-  * `bbox`: relative coordinates (from 0 to 1) representing the `left`, `top`, `right`, `bottom` sides of the bbox respectively
+  * `bbox`: relative coordinates (from 0 to 1) representing the `left`, `top`, `right`, `bottom` sides of the bbox, respectively
   * `fieldtype`: the fieldtype (sometimes called category or key) of the prediction
   * `line_item_id`: ID of the line item. This should be a different number for each line item, the order does not matter. Omit for KILE predictions.
   * `score` [optional]: the confidence for this prediction, can be omitted (in that case predictions are taken in the order in which they are stored in the list)
@@ -92,7 +92,7 @@ make test
 
 # Data
 
-Download dataset from [google drive](https://drive.google.com/file/d/1I4sf75dSEgnVEWE7MUZQX7BG98ivAYk6/view?usp=share_link) and unzip it into the `data/` folder.
+Download dataset from [google drive](https://drive.google.com/file/d/1I4sf75dSEgnVEWE7MUZQX7BG98ivAYk6/view?usp=share_link) and unzip it into the `data/` folder or work with the zipped dataset directly in a read-only mode (i.e., caching on disk for images must be turned off).
 
 ## Pre-computed OCR
 
@@ -110,6 +110,8 @@ from docile.evaluation import evaluate_dataset
 
 # example: take only 10 documents for debugging
 dataset_train = Dataset("train", "data/docile").sample(10, seed=42)
+# equivalently you can load the dataset directly from zip
+dataset_train = Dataset("train", "data/real.zip").sample(10, seed=42)
 
 for document in dataset_train:
     kile_fields = document.annotation.fields

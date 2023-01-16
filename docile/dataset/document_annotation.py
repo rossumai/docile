@@ -1,18 +1,18 @@
 import json
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from docile.dataset.cached_object import CachedObject, CachingConfig
 from docile.dataset.field import Field
+from docile.dataset.paths import PathMaybeInZip
 from docile.dataset.table_grid import TableGrid
 
 
 class DocumentAnnotation(CachedObject[Dict]):
-    def __init__(self, path: Path, cache: CachingConfig = CachingConfig.DISK) -> None:
+    def __init__(self, path: PathMaybeInZip, cache: CachingConfig = CachingConfig.DISK) -> None:
         super().__init__(path=path, cache=cache)
 
     def from_disk(self) -> Dict[str, Any]:
-        return json.loads(self.path.read_text())
+        return json.loads(self.path.read_bytes())
 
     @property
     def page_count(self) -> int:

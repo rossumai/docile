@@ -1,7 +1,6 @@
 import copy
 import json
 import logging
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 import cv2
@@ -11,6 +10,7 @@ from PIL import Image, ImageOps
 from docile.dataset.bbox import BBox
 from docile.dataset.cached_object import CachedObject, CachingConfig
 from docile.dataset.field import Field
+from docile.dataset.paths import PathMaybeInZip
 
 logger = logging.getLogger(__name__)
 
@@ -19,24 +19,27 @@ class DocumentOCR(CachedObject[Dict]):
     _model = None
 
     def __init__(
-        self, path: Path, pdf_path: Path, cache: CachingConfig = CachingConfig.DISK
+        self,
+        path: PathMaybeInZip,
+        pdf_path: PathMaybeInZip,
+        cache: CachingConfig = CachingConfig.DISK,
     ) -> None:
         super().__init__(path=path, cache=cache)
         self.pdf_path = pdf_path
 
     def from_disk(self) -> Dict:
-        return json.loads(self.path.read_text())
+        return json.loads(self.path.read_bytes())
 
     def to_disk(self, content: Any) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(content))
+        self.path.full_path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.full_path.write_text(json.dumps(content))
 
     def predict(self) -> Dict:
         """Predict the OCR."""
         # Load dependencies inside so that they are not needed when the pre-computed OCR is used.
         from doctr.io import DocumentFile
 
-        pdf_doc = DocumentFile.from_pdf(self.pdf_path)
+        pdf_doc = DocumentFile.from_pdf(self.pdf_path.read_bytes())
 
         ocr_pred = self.get_model()(pdf_doc)
         return ocr_pred.export()
