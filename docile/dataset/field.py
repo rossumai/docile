@@ -1,4 +1,5 @@
 import dataclasses
+import warnings
 from typing import Any, Mapping, Optional
 
 from docile.dataset.bbox import BBox
@@ -33,6 +34,14 @@ class Field:
     def from_dict(cls, dct: Mapping[str, Any]) -> "Field":
         dct_copy = dict(dct)
         bbox = BBox(*(dct_copy.pop("bbox")))
+
+        # do not fail on extra keys (if participants save extra information), only warn.
+        expected_keys = {f.name for f in dataclasses.fields(cls)}
+        for k in list(dct_copy.keys()):
+            if k not in expected_keys:
+                warnings.warn(f"Ignoring unexpected key {k}")
+                dct_copy.pop(k)
+
         return cls(bbox=bbox, **dct_copy)
 
     @property

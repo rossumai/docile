@@ -32,6 +32,10 @@ ignore =
     G004,
     # C901 Function is too complex
     C901,
+    # U101 An unused argument starting with an underscore
+    U101,
+    B028,
+    B017,
 
 max-complexity = 10
 max-line-length = 99
