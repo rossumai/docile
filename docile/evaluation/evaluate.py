@@ -295,9 +295,7 @@ def _validate_predictions(
             for predictions in docid_to_predictions.values()
             for pred in predictions
         ):
-            raise PredictionsValidationError(
-                f"{task.upper()}: Some prediction is missing 'fieldtype'."
-            )
+            raise PredictionsValidationError(f"{task.upper()}: Prediction is missing 'fieldtype'.")
 
     for task, docid_to_predictions in task_to_docid_to_predictions.items():
         if task == "kile":
@@ -307,7 +305,7 @@ def _validate_predictions(
                 for pred in predictions
             ):
                 raise PredictionsValidationError(
-                    f"{task.upper()}: Some prediction has extra 'line_item_id'."
+                    f"{task.upper()}: Prediction has extra 'line_item_id'."
                 )
 
         if task == "lir":
@@ -317,7 +315,7 @@ def _validate_predictions(
                 for pred in predictions
             ):
                 raise PredictionsValidationError(
-                    f"{task.upper()}: Some prediction is missing 'line_item_id'."
+                    f"{task.upper()}: Prediction is missing 'line_item_id'."
                 )
 
     for task, docid_to_predictions in task_to_docid_to_predictions.items():

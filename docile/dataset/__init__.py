@@ -2,7 +2,7 @@ from docile.dataset.bbox import BBox
 from docile.dataset.cached_object import CachingConfig
 from docile.dataset.dataset import Dataset
 from docile.dataset.document import Document
-from docile.dataset.field import Field
+from docile.dataset.field import Field, load_predictions, store_predictions
 from docile.dataset.table_grid import TableGrid
 
 KILE_FIELDTYPES = [
@@ -75,4 +75,6 @@ __all__ = [
     "KILE_FIELDTYPES",
     "LIR_FIELDYPES",
     "TableGrid",
+    "load_predictions",
+    "store_predictions",
 ]

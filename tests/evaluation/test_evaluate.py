@@ -366,7 +366,7 @@ def test_validate_predictions(sample_dataset: Dataset, sample_dataset_docid: str
 
     missing_fieldtype = {"task": {sample_dataset_docid: [Field(bbox=bbox, page=0)]}}
     with pytest.raises(
-        PredictionsValidationError, match="TASK: Some prediction is missing 'fieldtype'."
+        PredictionsValidationError, match="TASK: Prediction is missing 'fieldtype'."
     ):
         _validate_predictions(sample_dataset, missing_fieldtype)
 
@@ -375,14 +375,14 @@ def test_validate_predictions(sample_dataset: Dataset, sample_dataset_docid: str
     }
     _validate_predictions(sample_dataset, {"lir": with_line_item_id})  # ok
     with pytest.raises(
-        PredictionsValidationError, match="KILE: Some prediction has extra 'line_item_id'."
+        PredictionsValidationError, match="KILE: Prediction has extra 'line_item_id'."
     ):
         _validate_predictions(sample_dataset, {"kile": with_line_item_id})
 
     without_line_item_id = {sample_dataset_docid: [Field(bbox=bbox, page=0, fieldtype="f")]}
     _validate_predictions(sample_dataset, {"kile": without_line_item_id})
     with pytest.raises(
-        PredictionsValidationError, match="LIR: Some prediction is missing 'line_item_id'."
+        PredictionsValidationError, match="LIR: Prediction is missing 'line_item_id'."
     ):
         _validate_predictions(sample_dataset, {"lir": without_line_item_id})
 

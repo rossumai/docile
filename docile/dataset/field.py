@@ -1,6 +1,8 @@
 import dataclasses
+import json
 import warnings
-from typing import Any, Mapping, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from docile.dataset.bbox import BBox
 
@@ -44,6 +46,11 @@ class Field:
 
         return cls(bbox=bbox, **dct_copy)
 
+    def to_dict(self) -> Dict[str, Any]:
+        dct = dataclasses.asdict(self)
+        dct["bbox"] = dataclasses.astuple(self.bbox)
+        return dct
+
     @property
     def sorting_score(self) -> float:
         """
@@ -62,3 +69,23 @@ class Field:
         else:
             score = 0.5 + score / 2
         return score
+
+
+def store_predictions(path: Path, docid_to_predictions: Mapping[str, Sequence[Field]]) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                docid: [prediction.to_dict() for prediction in predictions]
+                for docid, predictions in docid_to_predictions.items()
+            },
+            indent=2,
+        )
+    )
+
+
+def load_predictions(path: Path) -> Dict[str, List[Field]]:
+    docid_to_raw_predictions = json.loads(path.read_text())
+    return {
+        docid: [Field.from_dict(prediction) for prediction in predictions]
+        for docid, predictions in docid_to_raw_predictions.items()
+    }

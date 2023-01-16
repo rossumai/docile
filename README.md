@@ -1,6 +1,45 @@
 # DocILE: Document Information Localization and Extraction Benchmark
 [![Tests](https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/rossumai/docile/actions/workflows/tests.yml)
 
+# Evaluate predictions
+
+To evaluate predictions for tasks KILE or LIR, use the following command:
+```bash
+poetry run evaluate -t KILE -d path/to/dataset/ -s val -p path/to/predictions.json --evaluate-also-text
+```
+
+Run `poetry run evaluate --help` for more information on the options.
+
+Predictions need to be stored in a single json file (for each task separately) containing a dictionary from `docid` to the predictions for that document, i.e.:
+```json
+{
+    "docid1": [
+        {
+            "page": 0,
+            "bbox": [0.2, 0.1, 0.4, 0.5],
+            "fieldtype": "line_item_order_id",
+            "line_item_id": 3,
+            "score": 0.8,
+            "text": "Order 38",
+            "use_only_for_ap": true
+        },
+        "..."
+    ],
+    "docid2": [{"...": "..."}, "..."],
+    "..."
+}
+```
+Explanation of the individual fields of the predictions:
+  * `page`: page index (from zero) the prediction belongs to
+  * `bbox`: relative coordinates (from 0 to 1) representing the `left`, `top`, `right`, `bottom` sides of the bbox respectively
+  * `fieldtype`: the fieldtype (sometimes called category or key) of the prediction
+  * `line_item_id`: ID of the line item. This should be a different number for each line item, the order does not matter. Omit for KILE predictions.
+  * `score` [optional]: the confidence for this prediction, can be omitted (in that case predictions are taken in the order in which they are stored in the list)
+  * `text` [optional]: text of the prediction, evaluated in a secondary metric only (when `--evaluate-also-text` is used)
+  * `use_only_for_ap` [optional, default is False]: only use the prediction for AP metric computation, not for f1, precision and recall (useful for less confident predictions).
+
+You can use `docile.dataset.store_predictions` to store predictions represented with the `docile.dataset.Field` class to a json file with the required format.
+
 # Development instructions
 
 ## Installation
