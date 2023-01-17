@@ -152,4 +152,4 @@ class Document:
         return f"Document({self.dataset_paths.dataset_path.name}/{self.docid})"
 
     def __repr__(self) -> str:
-        return f'Document(docid="{self.docid}", dataset_path="{self.dataset_paths.dataset_path}")'
+        return f"Document(docid={self.docid!r}, dataset_path={self.dataset_paths.dataset_path!r})"

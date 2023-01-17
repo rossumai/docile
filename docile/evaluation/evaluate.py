@@ -117,7 +117,7 @@ class EvaluationResult:
         if docid == "":
             report = [f"Evaluation report for {self.dataset_name}"]
         else:
-            report = [f"Evaluation report for '{docid}' from {self.dataset_name}"]
+            report = [f"Evaluation report for {docid!r} from {self.dataset_name}"]
 
         iou_threshold_str = ""
         if self.iou_threshold < 1:
