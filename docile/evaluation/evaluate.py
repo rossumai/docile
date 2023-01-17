@@ -1,8 +1,10 @@
 import hashlib
+import json
 import logging
 import operator
 from collections import Counter
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, List, Mapping, Sequence, Tuple, Union
 
 from tabulate import tabulate
@@ -45,6 +47,30 @@ class EvaluationResult:
     task_to_docid_to_matching: Mapping[str, Mapping[str, FieldMatching]]
     dataset_name: str  # name of evaluated Dataset
     iou_threshold: float  # which value was used to for the evaluation
+
+    def to_file(self, path: Path) -> None:
+        encoded_matchings = {
+            task: {docid: matching.to_dict() for docid, matching in docid_to_matching.items()}
+            for task, docid_to_matching in self.task_to_docid_to_matching.items()
+        }
+        dct = {
+            "dataset_name": self.dataset_name,
+            "iou_threshold": self.iou_threshold,
+            "task_to_docid_to_matching": encoded_matchings,
+        }
+        path.write_text(json.dumps(dct, indent=2))
+
+    @classmethod
+    def from_file(cls, path: Path) -> "EvaluationResult":
+        dct = json.loads(path.read_text())
+        matchings = {
+            task: {
+                docid: FieldMatching.from_dict(matching)
+                for docid, matching in docid_to_matching.items()
+            }
+            for task, docid_to_matching in dct["task_to_docid_to_matching"].items()
+        }
+        return cls(matchings, dct["dataset_name"], dct["iou_threshold"])
 
     def get_primary_metric(self, task: str) -> float:
         """Return the primary metric used for DocILE'23 benchmark competition."""
