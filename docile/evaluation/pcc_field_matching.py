@@ -1,7 +1,7 @@
+import dataclasses
 import itertools
 from collections import defaultdict
-from dataclasses import dataclass
-from typing import List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from docile.dataset import BBox, Field
 from docile.evaluation.pcc import PCCSet
@@ -10,13 +10,13 @@ from docile.evaluation.pcc import PCCSet
 EPS = 1e-6
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class MatchedPair:
     pred: Field
     gold: Field
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class FieldMatching:
     """
     Structure to represent matching between two sets of fields, predictions and annotations.
@@ -103,6 +103,45 @@ class FieldMatching:
             else:
                 new_ordered_predictions_with_match.append((pred, gold))
         return self.__class__(new_ordered_predictions_with_match, new_false_negatives)
+
+    @classmethod
+    def from_dict(cls, dct: Mapping[str, Any]) -> "FieldMatching":
+        dct_decoded_fields = {key: cls._decode_fields(sequence) for key, sequence in dct.items()}
+        return cls(**dct_decoded_fields)  # type: ignore
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            field.name: self._encode_fields(getattr(self, field.name))
+            for field in dataclasses.fields(self)
+        }
+
+    @staticmethod
+    def _decode_fields(
+        collection: Union[Mapping, Sequence, Tuple, None]
+    ) -> Union[Field, List, Tuple, None]:
+        if collection is None:
+            return None
+        if isinstance(collection, dict):
+            return Field.from_dict(collection)
+        if isinstance(collection, tuple):
+            return tuple(FieldMatching._decode_fields(item) for item in collection)
+        if isinstance(collection, list):
+            return [FieldMatching._decode_fields(item) for item in collection]
+        raise ValueError(f"Unexpected type {type(collection)} while decoding fields")
+
+    @staticmethod
+    def _encode_fields(
+        collection: Union[Field, Sequence, Tuple, None]
+    ) -> Union[Mapping, List, Tuple, None]:
+        if collection is None:
+            return None
+        if isinstance(collection, Field):
+            return collection.to_dict()
+        if isinstance(collection, tuple):
+            return tuple(FieldMatching._encode_fields(item) for item in collection)
+        if isinstance(collection, list):
+            return [FieldMatching._encode_fields(item) for item in collection]
+        raise ValueError(f"Unexpected type {type(collection)} while encoding fields")
 
 
 def pccs_iou(pcc_set: PCCSet, gold_bbox: BBox, pred_bbox: BBox, page: int) -> float:

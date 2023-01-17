@@ -40,6 +40,7 @@ torchvision = "^0.13.0"
 
 [tool.poetry.scripts]
 evaluate = "docile.cli.evaluate:evaluate"
+print-evaluation-report = "docile.cli.evaluate:print_evaluation_report"
 
 [build-system]
 requires = ["poetry-core"]
