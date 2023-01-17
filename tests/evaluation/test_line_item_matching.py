@@ -25,7 +25,7 @@ def test_place_bbox_in_document() -> None:
 
 
 def test_get_covering_bbox() -> None:
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         _get_covering_bbox([])
 
     bboxes = [

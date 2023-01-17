@@ -94,7 +94,7 @@ class DatasetBrowser:
 
         with self.output:
             clear_output()
-            print(  # noqa
+            print(  # noqa T201
                 f"document {self.dataset[self.doc_i].docid} ({self.doc_i+1}/{len(self.dataset)}), "
                 f"page {self.page_i+1}/{self.dataset[self.doc_i].page_count}"
             )
@@ -135,7 +135,7 @@ class DatasetBrowser:
     def _get_field_description(field: Field, prefix: str) -> str:
         li_suffix = f" @item {field.line_item_id}" if field.line_item_id is not None else ""
         multiline_text = field.text.replace("\n", "<br>") if field.text is not None else ""
-        return f'[{prefix}{field.fieldtype}{li_suffix}]<br>"{multiline_text}"'
+        return f"[{prefix}{field.fieldtype}{li_suffix}]<br>{multiline_text}"
 
     def draw_fields(
         self, bboxes_and_descriptions: List[Tuple[BBox, str]], color: str = "RoyalBlue"

@@ -193,7 +193,7 @@ class Dataset:
         return f"Dataset({self.name})"
 
     def __repr__(self) -> str:
-        return f'Dataset(split_name="{self.split_name}", dataset_path="{self.dataset_path}")'
+        return f"Dataset(split_name={self.split_name!r}, dataset_path={self.dataset_path!r})"
 
     @classmethod
     def from_documents(
