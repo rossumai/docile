@@ -401,7 +401,7 @@ def test_validate_predictions(sample_dataset: Dataset, sample_dataset_docid: str
     extra_doc = {sample_dataset_docid: [], "mock-docid": []}
     with pytest.raises(
         PredictionsValidationError,
-        match="TASK: Predictions provided for 1 documents not in the dataset sample-dataset/dev",
+        match="TASK: Predictions provided for 1 documents not in the dataset sample-dataset:dev",
     ):
         _validate_predictions(sample_dataset, {"task": extra_doc})
 
