@@ -5,7 +5,12 @@
 
 To evaluate predictions for tasks KILE or LIR, use the following command:
 ```bash
-poetry run evaluate --task KILE --dataset-path path/to/dataset[.zip] --split val --predictions path/to/predictions.json --evaluate-also-text
+poetry run evaluate \
+  --task LIR \
+  --dataset-path path/to/dataset[.zip] \
+  --split val \
+  --predictions path/to/predictions.json \
+  --evaluate-also-text
 ```
 
 Run `poetry run evaluate --help` for more information on the options.
