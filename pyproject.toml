@@ -46,6 +46,7 @@ torch = ">=1.12"
 datasets = {extras = ["s3"], version = "^2.8.0"}
 torchmetrics = "^0.11.0"
 sentencepiece = "^0.1.97"
+tensorboard = "^2.11.2"
 
 [tool.poetry.scripts]
 evaluate = "docile.cli.evaluate:evaluate"
