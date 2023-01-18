@@ -96,9 +96,7 @@ download_and_unzip() {
   popd > /dev/null
 }
 
-if [[ "$dataset" != "unlabeled" ]]; then
-  download_and_unzip "$token" "$targetdir" "$unzip" "$dataset"
-else
+if [[ "$dataset" == "unlabeled" ]]; then
   download_and_unzip "$token" "$targetdir" "$unzip" "unlabeled-annotations"
   for i in $(seq -f "%02g" 0 "$UNLABELED_CHUNK_MAX"); do
     if [[ "$without_pdfs" == "yes" ]]; then
@@ -107,4 +105,13 @@ else
       download_and_unzip "$token" "$targetdir" "$unzip" "unlabeled-chunk-$i"
     fi
   done
+elif [[ "$dataset" == "baselines" ]]; then
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-base"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-ours"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-ours"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-detr"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-pretraining"
+else
+  download_and_unzip "$token" "$targetdir" "$unzip" "$dataset"
 fi

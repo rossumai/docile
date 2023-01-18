@@ -1,4 +1,4 @@
-version: '2.4'
+version: "2.4"
 services:
   jupyter:
     image: jupyter/base-notebook
@@ -24,6 +24,7 @@ services:
       dockerfile: Dockerfile.gpu
       args:
         GPU_RUNTIME: nvidia
+    shm_size: "8gb"
     ports:
       - "${JUPYTER_PORT_GPU}:${JUPYTER_PORT_GPU}"
     command: poetry run jupyter lab --ip=0.0.0.0 --port=${JUPYTER_PORT_GPU} --allow-root
@@ -33,8 +34,8 @@ services:
       resources:
         # consider updating these limits
         limits:
-          cpus: "16"
-          memory: 32GB
+          cpus: "32"
+          memory: 500GB
         reservations:
           devices:
           - driver: "nvidia"
