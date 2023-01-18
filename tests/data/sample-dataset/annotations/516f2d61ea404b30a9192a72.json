@@ -106,7 +106,7 @@
         0.8814516129032258,
         0.20972644376899696
       ],
-      "fieldtype": "variable_symbol",
+      "fieldtype": "payment_reference",
       "page": 0,
       "text": "99999999"
     },
@@ -691,12 +691,14 @@
     }
   ],
   "metadata": {
-    "border_type": "column_borders",
     "cluster_id": 554,
     "currency": "other",
     "document_type": "tax_invoice",
     "language": "eng",
     "original_filename": "nkvc0055",
+    "page_aspect_ratios": [
+      0.7537993920972644
+    ],
     "page_count": 1,
     "page_to_table_grid": {
       "0": {
@@ -823,7 +825,7 @@
           },
           {
             "bottom": 0.7914893617021277,
-            "row_type": "unknown",
+            "row_type": "gap-with-text",
             "top": 0.676595744680851
           },
           {
@@ -836,10 +838,11 @@
             "row_type": "footer",
             "top": 0.8224924012158055
           }
-        ]
+        ],
+        "table_border_type": "column_borders",
+        "table_structure": "normal"
       }
     },
-    "source": "ucsf",
-    "table_structure": "normal"
+    "source": "ucsf"
   }
 }
