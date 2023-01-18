@@ -12,6 +12,7 @@ homepage = "https://docile.rossum.ai/"
 repository = "https://github.com/rossumai/docile"
 packages = [
     { include = "docile" },
+    { include = "baselines" },
 ]
 
 [tool.poetry.dependencies]
@@ -37,6 +38,14 @@ pytest = "^7.2.0"
 python-doctr = "^0.6.0"
 torch = "^1.12.0"
 torchvision = "^0.13.0"
+
+
+[tool.poetry.group.baselines.dependencies]
+transformers = "^4.25.1"
+torch = ">=1.12"
+datasets = {extras = ["s3"], version = "^2.8.0"}
+torchmetrics = "^0.11.0"
+sentencepiece = "^0.1.97"
 
 [tool.poetry.scripts]
 evaluate = "docile.cli.evaluate:evaluate"

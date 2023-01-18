@@ -5,7 +5,7 @@ from typing import Generic, Tuple, TypeVar, no_type_check
 T = TypeVar("T", int, float)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass()
 class BBox(Generic[T]):
     left: T
     top: T

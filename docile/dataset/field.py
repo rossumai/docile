@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 from docile.dataset.bbox import BBox
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass()
 class Field:
     bbox: BBox
     page: int
@@ -15,6 +15,7 @@ class Field:
     text: Optional[str] = None
     fieldtype: Optional[str] = None
     line_item_id: Optional[int] = None
+    groups: Sequence[str] = None
 
     # The flag `use_only_for_ap` can be set for some predictions in which case these will be only
     # used for Average Precision (AP) computation but they will not be used for:
