@@ -19,7 +19,7 @@ Table of Contents:
 * [Development instructions](#development-instructions)
 * [Dataset and benchmark paper](#dataset-and-benchmark-paper)
 
-Also check [Tutorials](tutorials/) to get quickly started with the repo.
+Also check [Tutorials](tutorials/) to get quickly started with the repo and [Baselines](baselines/) for the provided baseline solutions.
 
 ## Download the dataset
 
