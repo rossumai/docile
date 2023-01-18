@@ -176,7 +176,7 @@ def get_matches(
     return FieldMatching(ordered_predictions_with_match, false_negatives)
 
 
-def _get_sort_key_by_score(pred_with_index: Tuple[int, Field]) -> Tuple[float, int]:
+def _get_sort_key_by_score(pred_with_index: Tuple[int, Field]) -> Tuple[Tuple[bool, float], int]:
     """Sort predictions by score, use original order for equal scores."""
     pred_i, pred = pred_with_index
-    return (-pred.sorting_score, pred_i)
+    return (pred.score_sort_key, pred_i)

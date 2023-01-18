@@ -17,7 +17,7 @@ from docile.evaluation.pcc_field_matching import FieldMatching, get_matches
 logger = logging.getLogger(__name__)
 
 
-PredictionSortKey = Tuple[float, int, str]
+PredictionSortKey = Tuple[Tuple[bool, float], int, str]
 
 TASK_TO_PRIMARY_METRIC_NAME = {"kile": "AP", "lir": "f1"}
 METRIC_NAMES = ["AP", "f1", "precision", "recall", "TP", "FP", "FN"]
@@ -387,7 +387,7 @@ def _sort_predictions(docid_to_matching: Mapping[str, FieldMatching]) -> Sequenc
     for docid, matching in docid_to_matching.items():
         for pred_i, (pred, gold) in enumerate(matching.ordered_predictions_with_match):
             sort_key_prediction_matched.append(
-                (_get_prediction_sort_key(pred.sorting_score, pred_i, docid), gold is not None)
+                (_get_prediction_sort_key(pred.score_sort_key, pred_i, docid), gold is not None)
             )
         total_annotations += len(matching.annotations)
 
@@ -397,7 +397,9 @@ def _sort_predictions(docid_to_matching: Mapping[str, FieldMatching]) -> Sequenc
     ]
 
 
-def _get_prediction_sort_key(score: float, prediction_i: int, docid: str) -> PredictionSortKey:
+def _get_prediction_sort_key(
+    score_sort_key: Tuple[bool, float], prediction_i: int, docid: str
+) -> PredictionSortKey:
     """
     Get a sort key for a prediction.
 
@@ -423,4 +425,4 @@ def _get_prediction_sort_key(score: float, prediction_i: int, docid: str) -> Pre
     """
     hashed_docid = hashlib.sha1(docid.encode())
     hashed_docid.update(prediction_i.to_bytes(8, "little"))
-    return (-score, prediction_i, hashed_docid.hexdigest()[:16])
+    return (score_sort_key, prediction_i, hashed_docid.hexdigest()[:16])
