@@ -2,7 +2,6 @@ import random
 from copy import deepcopy
 from dataclasses import replace
 from typing import Tuple
-from unittest import mock
 
 import pytest
 
@@ -512,15 +511,15 @@ def test_sort_predictions_with_ap_only() -> None:
 
 
 def test_get_prediction_sort_key() -> None:
-    a0 = _get_prediction_sort_key(1.0, 0, "a")
-    b0 = _get_prediction_sort_key(1.0, 0, "b")
-    a2 = _get_prediction_sort_key(0.4, 2, "a")
-    b2 = _get_prediction_sort_key(0.4, 2, "b")
-    assert a0 == (-1, 0, mock.ANY)
-    assert b0 == (-1, 0, mock.ANY)
-    assert a2 == (-0.4, 2, mock.ANY)
-    assert b2 == (-0.4, 2, mock.ANY)
-    # The following two pairs have the same score and prediction_i but are in different order for
-    # the two docs. This is thanks to the hashing of docid with prediction_i.
+    a0 = _get_prediction_sort_key((False, -1.0), 0, "a")
+    b0 = _get_prediction_sort_key((False, -1.0), 0, "b")
+    a2 = _get_prediction_sort_key((True, -1.5), 2, "a")
+    b2 = _get_prediction_sort_key((True, -1.5), 2, "b")
+    assert a0 == ((False, -1.0), 0, "d95520d967275249")
+    assert b0 == ((False, -1.0), 0, "0407a70fca4cc072")
+    assert a2 == ((True, -1.5), 2, "55d1989cd656edd2")
+    assert b2 == ((True, -1.5), 2, "77b295898f2dbda5")
+    # The two pairs (a0,b0) and (a2,b2) have the same score and prediction_i but are in different
+    # order for the two docs. This is thanks to the hashing of docid with prediction_i.
     assert b0 < a0
     assert a2 < b2

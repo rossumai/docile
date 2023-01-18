@@ -2,7 +2,7 @@ import dataclasses
 import json
 import warnings
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from docile.dataset.bbox import BBox
 
@@ -52,23 +52,16 @@ class Field:
         return dct
 
     @property
-    def sorting_score(self) -> float:
+    def score_sort_key(self) -> Tuple[bool, float]:
         """
-        Score used for sorting predictions.
+        Sort key used to sort predictions by score from highest to lowest.
 
-        This function makes sure that all predictions with `use_only_for_ap=True` have lower score
-        than the remaining predictions.
+        This function makes sure that all predictions with `use_only_for_ap=True` come after the
+        remaining predictions.
         """
-        score = self.score if self.score is not None else 1
-        if not 0 <= score <= 1:
-            raise ValueError(f"Score of field {self} is not in range [0, 1]")
+        score = self.score if self.score is not None else 0
 
-        # transform score to [0, 0.5) if use_only_for_ap == True, or to [0.5, 1] otherwise
-        if self.use_only_for_ap:
-            score /= 2.000001
-        else:
-            score = 0.5 + score / 2
-        return score
+        return (self.use_only_for_ap, -score)
 
 
 def store_predictions(path: Path, docid_to_predictions: Mapping[str, Sequence[Field]]) -> None:
