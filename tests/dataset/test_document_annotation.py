@@ -21,7 +21,7 @@ def test_document_annotation_get_table_grid(
         "header",
         "gap",
         "data",
-        "unknown",
+        "gap-with-text",
         "footer",
     }
 
@@ -43,5 +43,8 @@ def test_document_annotation_get_table_grid(
 
     assert not grid.missing_columns
     assert not grid.missing_second_table_on_page
+
+    assert grid.table_border_type == "column_borders"
+    assert grid.table_structure == "normal"
 
     assert doc.annotation.get_table_grid(page=1) is None
