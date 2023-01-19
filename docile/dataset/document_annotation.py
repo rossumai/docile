@@ -22,9 +22,15 @@ class DocumentAnnotation(CachedObject[Dict]):
     def fields(self) -> List[Field]:
         return [Field.from_dict(a) for a in self.content["field_extractions"]]
 
+    def page_fields(self, page: int) -> List[Field]:
+        return [f for f in self.fields if f.page == page]
+
     @property
     def li_fields(self) -> List[Field]:
         return [Field.from_dict(a) for a in self.content["line_item_extractions"]]
+
+    def page_li_fields(self, page: int) -> List[Field]:
+        return [f for f in self.li_fields if f.page == page]
 
     @property
     def cluster_id(self) -> int:
