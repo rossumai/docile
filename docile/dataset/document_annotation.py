@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from docile.dataset.cached_object import CachedObject, CachingConfig
 from docile.dataset.field import Field
@@ -34,6 +34,10 @@ class DocumentAnnotation(CachedObject[Dict]):
         Cluster represents a group of documents with the same layout.
         """
         return self.content["metadata"]["cluster_id"]
+
+    def page_size_at_200dpi(self, page: int) -> Tuple[int, int]:
+        """Get (width, height) tuple of the pdf page when rendered at 200 DPI."""
+        return self.content["metadata"]["page_sizes_at_200dpi"][page]
 
     def get_table_grid(self, page: int) -> Optional[TableGrid]:
         """

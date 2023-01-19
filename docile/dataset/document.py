@@ -2,14 +2,13 @@ from pathlib import Path
 from types import TracebackType
 from typing import Optional, Type, Union
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from docile.dataset.cached_object import CachingConfig
 from docile.dataset.document_annotation import DocumentAnnotation
 from docile.dataset.document_images import DocumentImages
 from docile.dataset.document_ocr import DocumentOCR
 from docile.dataset.paths import DataPaths
-from docile.dataset.types import OptionalImageSize
 
 
 class Document:
@@ -89,30 +88,32 @@ class Document:
             self._page_count = self.annotation.page_count
         return self._page_count
 
-    def page_image(self, page: int, image_size: OptionalImageSize = (None, None)) -> Image.Image:
+    def page_image(self, page: int, dpi: int = 200) -> Image.Image:
         """
         Get image of the requested page.
+
+        You can get the image size for the default DPI=200 without generating the image by using
+        `document.annotation.page_size_at_200dpi(page)`.
 
         Parameters
         ----------
         page
             Number of the page (from 0 to page_count - 1)
-        image_size
-            Check https://pdf2image.readthedocs.io/en/latest/reference.html for documentation of
-            this parameter.
+        dpi
+            Quality at which the image is generated from the pdf.
         """
-        if image_size not in self.images:
-            self.images[image_size] = DocumentImages(
-                path=self.data_paths.cache_images_path(self.docid, image_size),
+        if dpi not in self.images:
+            self.images[dpi] = DocumentImages(
+                path=self.data_paths.cache_images_path(self.docid, dpi),
                 pdf_path=self.data_paths.pdf_path(self.docid),
                 page_count=self.page_count,
-                size=image_size,
+                dpi=dpi,
                 cache=self.cache_images,
             )
             if self._open:
-                self.images[image_size].__enter__()
+                self.images[dpi].__enter__()
 
-        return self.images[image_size].content[page]
+        return self.images[dpi].content[page]
 
     def __enter__(self) -> "Document":
         self._open = True
@@ -129,27 +130,6 @@ class Document:
         self._open = False
         for ctx in (self.ocr, self.annotation, *self.images.values()):
             ctx.__exit__(exc_type, exc, traceback)
-
-    def page_image_with_fields(
-        self, page: int, image_size: OptionalImageSize = (None, None), show_ocr_words: bool = False
-    ) -> Image.Image:
-        """Return page image with bboxes representing fields."""
-
-        page_img = self.page_image(page, image_size)
-
-        draw_img = page_img.copy()
-        draw = ImageDraw.Draw(draw_img)
-
-        for fields, color in [
-            (self.annotation.fields, "green"),
-            (self.annotation.li_fields, "blue"),
-        ] + ([(self.ocr.get_all_words(page), "red")] if show_ocr_words else []):
-            for field in fields:
-                if field.page != page:
-                    continue
-                scaled_bbox = field.bbox.to_absolute_coords(draw_img.width, draw_img.height)
-                draw.rectangle(scaled_bbox.to_tuple(), outline=color)
-        return draw_img
 
     def __str__(self) -> str:
         return f"Document({self.data_paths.name}:{self.docid})"
