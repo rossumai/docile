@@ -28,13 +28,28 @@ class DisplayType(enum.Enum):
             DisplayType.ANNOTATION_MATCHED: "Matched Annotation",
             DisplayType.ANNOTATION_UNMATCHED: "Unmatched Annotation",
             DisplayType.PREDICTION: "Prediction",
-            DisplayType.PREDICTION_MATCHED: "Matched Prediction",
-            DisplayType.PREDICTION_UNMATCHED: "Unmatched Prediction",
+            DisplayType.PREDICTION_MATCHED: "Correct Prediction",
+            DisplayType.PREDICTION_UNMATCHED: "False Prediction",
             DisplayType.TABLE_AREA: "Table Area",
             DisplayType.TABLE_ROW: "Table Row",
             DisplayType.TABLE_COLUMN: "Table Column",
         }
         return d[self]
+
+    @property
+    def prefix(self) -> str:
+        type_to_prefix = {
+            DisplayType.ANNOTATION: "Annotation ",
+            DisplayType.ANNOTATION_MATCHED: "Matched annot. ",
+            DisplayType.ANNOTATION_UNMATCHED: "Unmatched annot. ",
+            DisplayType.PREDICTION: "Prediction ",
+            DisplayType.PREDICTION_MATCHED: "Correct pred. ",
+            DisplayType.PREDICTION_UNMATCHED: "False pred. ",
+            DisplayType.TABLE_AREA: "Table area",
+            DisplayType.TABLE_ROW: "Table row ",
+            DisplayType.TABLE_COLUMN: "Table column ",
+        }
+        return type_to_prefix[self]
 
     @property
     def color(self) -> str:
@@ -55,16 +70,16 @@ class DisplayType(enum.Enum):
 @dataclass
 class DisplayBox:
     box: BBox
-    desc: str
-    type: DisplayType
+    description: str
+    display_type: DisplayType
 
     @property
     def color(self) -> str:
-        return self.type.color
+        return self.display_type.color
 
     @property
     def name(self) -> str:
-        return str(self.type)
+        return str(self.display_type)
 
 
 class DatasetBrowser:
@@ -182,20 +197,20 @@ class DatasetBrowser:
             self.plot_page()
 
     def get_displayboxes_and_resolve_overlaps(
-        self, fields_types_prefixes: List[Tuple[Field, DisplayType, str]], merge_iou: float = 0.7
+        self, fields_types: List[Tuple[Field, DisplayType]], merge_iou: float = 0.7
     ) -> List[DisplayBox]:
         # sort from largest to smallest for interactive browsing, so that smaller bboxes interact
         # on top of the larger
-        fields_types_prefixes = sorted(fields_types_prefixes, key=lambda f: -f[0].bbox.area)
+        fields_types = sorted(fields_types, key=lambda f: -f[0].bbox.area)
 
         descriptions = []
-        for field, _type, prefix in fields_types_prefixes:
-            descriptions.append(self._get_field_description(field, prefix))
+        for field, display_type in fields_types:
+            descriptions.append(self._get_field_description(field, display_type.prefix))
 
         display_boxes = []
-        for i, (field, type, _prefix) in enumerate(fields_types_prefixes):
+        for i, (field, display_type) in enumerate(fields_types):
             desc = [descriptions[i]]
-            for j, (field2, _, _) in enumerate(fields_types_prefixes):
+            for j, (field2, _) in enumerate(fields_types):
                 if i == j:
                     continue
                 iou = (
@@ -204,7 +219,9 @@ class DatasetBrowser:
                 if iou > merge_iou:
                     desc.append(descriptions[j])
 
-            display_boxes.append(DisplayBox(field.bbox, desc="<br>".join(desc), type=type))
+            display_boxes.append(
+                DisplayBox(field.bbox, description="<br>".join(desc), display_type=display_type)
+            )
         return display_boxes
 
     @staticmethod
@@ -213,17 +230,23 @@ class DatasetBrowser:
         multiline_text = field.text.replace("\n", "<br>") if field.text is not None else ""
         return f"[{prefix}{field.fieldtype}{li_suffix}]<br>{multiline_text}"
 
-    def draw_fields(self, display_boxes: List[DisplayBox], display_legend: bool = True) -> None:
+    def draw_fields(self, display_boxes: List[DisplayBox]) -> None:
         displayed_types = set()
         # Add field bounding boxes
-        for db in display_boxes:
-            x0 = db.box.left * self.scaled_width
-            y0 = self.scaled_height - db.box.top * self.scaled_height
-            x1 = db.box.right * self.scaled_width
-            y1 = self.scaled_height - db.box.bottom * self.scaled_height
+        for display_box in display_boxes:
+            x0 = display_box.box.left * self.scaled_width
+            y0 = self.scaled_height - display_box.box.top * self.scaled_height
+            x1 = display_box.box.right * self.scaled_width
+            y1 = self.scaled_height - display_box.box.bottom * self.scaled_height
 
             self.fig.add_shape(
-                type="rect", x0=x0, y0=y0, x1=x1, y1=y1, line={"color": db.color}, name=db.name
+                type="rect",
+                x0=x0,
+                y0=y0,
+                x1=x1,
+                y1=y1,
+                line={"color": display_box.color},
+                name=display_box.name,
             )
 
             # Adding a trace with a fill, setting opacity to 0
@@ -233,25 +256,25 @@ class DatasetBrowser:
                     y=[y0, y1, y1, y0],
                     fill="toself",
                     mode="lines",
-                    text=db.desc,
+                    text=display_box.description,
+                    name="",
                     opacity=0,
                     showlegend=False,
                 )
             )
-            displayed_types.add(db.type)
+            displayed_types.add(display_box.display_type)
 
-        if display_legend:
-            for t in DisplayType:
-                if t in displayed_types:
-                    self.fig.add_trace(
-                        go.Scatter(
-                            x=[None],
-                            y=[None],
-                            mode="markers",
-                            name=str(t),
-                            marker={"size": 7, "color": t.color, "symbol": "square"},
-                        )
+        for t in DisplayType:
+            if t in displayed_types:
+                self.fig.add_trace(
+                    go.Scatter(
+                        x=[None],
+                        y=[None],
+                        mode="markers",
+                        name=str(t),
+                        marker={"size": 7, "color": t.color, "symbol": "square"},
                     )
+                )
 
     def get_all_displayboxes(self) -> List[DisplayBox]:
         annotation = self.dataset[self.doc_i].annotation
@@ -272,55 +295,52 @@ class DatasetBrowser:
                 )
                 display_boxes.extend(
                     [
-                        DisplayBox(bbox, f"[Table row {col_type}]", DisplayType.TABLE_ROW)
-                        for bbox, col_type in table_grid.rows_bbox_with_type
+                        DisplayBox(bbox, f"[Table row {row_type}]", DisplayType.TABLE_ROW)
+                        for bbox, row_type in table_grid.rows_bbox_with_type
                     ]
                 )
 
-        fields_types_prefixes = []
+        fields_types = []
 
         # display KILE predictions with matching (if available) or without (if not available):
         if self.kile_matching is not None:
             if self.docid in self.kile_matching:
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (f, DisplayType.PREDICTION_UNMATCHED, "False pred. ")
+                        (f, DisplayType.PREDICTION_UNMATCHED)
                         for f in self.kile_matching[self.docid].false_positives
                         if f.page == self.page_i
                     ]
                 )
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (f, DisplayType.ANNOTATION_UNMATCHED, "Unmatched annot. ")
+                        (f, DisplayType.ANNOTATION_UNMATCHED)
                         for f in self.kile_matching[self.docid].false_negatives
                         if f.page == self.page_i
                     ]
                 )
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (m.pred, DisplayType.PREDICTION_MATCHED, "Correct pred. ")
+                        (m.pred, DisplayType.PREDICTION_MATCHED)
                         for m in self.kile_matching[self.docid].matches
                         if m.pred.page == self.page_i
                     ]
                 )
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (m.gold, DisplayType.ANNOTATION_MATCHED, "Matched annot. ")
+                        (m.gold, DisplayType.ANNOTATION_MATCHED)
                         for m in self.kile_matching[self.docid].matches
                         if m.gold.page == self.page_i
                     ]
                 )
         else:
-            fields_types_prefixes.extend(
-                [
-                    (f, DisplayType.ANNOTATION, "Annot. ")
-                    for f in annotation.page_fields(self.page_i)
-                ]
+            fields_types.extend(
+                [(f, DisplayType.ANNOTATION) for f in annotation.page_fields(self.page_i)]
             )
             if self.kile_predictions is not None:
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (f, DisplayType.PREDICTION, "Predicted ")
+                        (f, DisplayType.PREDICTION)
                         for f in self.kile_predictions.get(self.docid, [])
                         if f.page == self.page_i
                     ]
@@ -329,53 +349,51 @@ class DatasetBrowser:
         # display LIR predictions with matching (if available) or without (if not available):
         if self.lir_matching is not None:
             if self.docid in self.lir_matching:
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (f, DisplayType.PREDICTION_UNMATCHED, "False pred. ")
+                        (f, DisplayType.PREDICTION_UNMATCHED)
                         for f in self.lir_matching[self.docid].false_positives
                         if f.page == self.page_i
                     ]
                 )
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (f, DisplayType.ANNOTATION_UNMATCHED, "Unmatched annot. ")
+                        (f, DisplayType.ANNOTATION_UNMATCHED)
                         for f in self.lir_matching[self.docid].false_negatives
                         if f.page == self.page_i
                     ]
                 )
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (m.pred, DisplayType.PREDICTION_MATCHED, "Correct pred. ")
+                        (m.pred, DisplayType.PREDICTION_MATCHED)
                         for m in self.lir_matching[self.docid].matches
                         if m.pred.page == self.page_i
                     ]
                 )
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (m.gold, DisplayType.ANNOTATION_MATCHED, "Matched annot. ")
+                        (
+                            m.gold,
+                            DisplayType.ANNOTATION_MATCHED,
+                        )
                         for m in self.lir_matching[self.docid].matches
                         if m.gold.page == self.page_i
                     ]
                 )
         else:
-            fields_types_prefixes.extend(
-                [
-                    (f, DisplayType.ANNOTATION, "LI annot.")
-                    for f in annotation.page_li_fields(self.page_i)
-                ]
+            fields_types.extend(
+                [(f, DisplayType.ANNOTATION) for f in annotation.page_li_fields(self.page_i)]
             )
             if self.lir_predictions is not None:
-                fields_types_prefixes.extend(
+                fields_types.extend(
                     [
-                        (f, DisplayType.PREDICTION, "Predicted ")
+                        (f, DisplayType.PREDICTION)
                         for f in self.lir_predictions.get(self.docid, [])
                         if f.page == self.page_i
                     ]
                 )
 
-        display_boxes.extend(
-            self.get_displayboxes_and_resolve_overlaps(fields_types_prefixes=fields_types_prefixes)
-        )
+        display_boxes.extend(self.get_displayboxes_and_resolve_overlaps(fields_types=fields_types))
         return display_boxes
 
     def plot_page(self, scale_factor: float = 0.5) -> None:
@@ -424,5 +442,6 @@ class DatasetBrowser:
             height=self.scaled_height,
             margin={"l": 0, "r": 0, "t": 0, "b": 0},
             showlegend=True,
+            legend={"yanchor": "top", "y": 0.9, "xanchor": "left", "x": 1},
         )
         self.fig.show(config={"doubleClick": "reset"})
