@@ -5,7 +5,8 @@ description = "Tools to work with the DocILE dataset and benchmark"
 authors = [
     "Stepan Simsa <stepan.simsa@rossum.ai>",
     "Matyas Skalicky <matyas.skalicky@rossum.ai>",
-    "Milan Sulc <milan.sulc@rossum.ai>"
+    "Milan Sulc <milan.sulc@rossum.ai>",
+    "Michal Uricar <michal.uricar@rossum.ai>",
 ]
 readme = "README.md"
 homepage = "https://docile.rossum.ai/"
@@ -37,12 +38,11 @@ pytest = "^7.2.0"
 [tool.poetry.group.doctr.dependencies]
 python-doctr = "^0.6.0"
 torch = "^1.12.0"
-torchvision = "^0.13.0"
-
 
 [tool.poetry.group.baselines.dependencies]
+torch = { url = "https://download.pytorch.org/whl/cu117/torch-1.13.0%2Bcu117-cp310-cp310-linux_x86_64.whl" }
+torchvision = {url = "https://download.pytorch.org/whl/cu117/torchvision-0.14.0%2Bcu117-cp310-cp310-linux_x86_64.whl"}
 transformers = "^4.25.1"
-torch = ">=1.12"
 datasets = {extras = ["s3"], version = "^2.8.0"}
 torchmetrics = "^0.11.0"
 sentencepiece = "^0.1.97"
