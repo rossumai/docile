@@ -7,9 +7,6 @@ from pathlib import Path
 import numpy as np
 import torch
 from transformers import (AutoTokenizer, AutoConfig)
-# from my_roberta_multilabel import MyXLMRobertaMLForTokenClassification
-# from my_roberta import MyXLMRobertaForTokenClassification
-# from my_bert import MyBertForTokenClassification
 from my_layoutlmv3 import MyLayoutLMv3Config, MyLayoutLMv3ForTokenClassification
 from data_collator import MyLayoutLMv3MLDataCollatorForTokenClassification
 from transformers.models.layoutlmv3.processing_layoutlmv3 import LayoutLMv3Processor
@@ -229,68 +226,6 @@ def merge_vertically(f_tuple, fields, sep="\n", THR=0.15):
 
 
 def merge_text_boxes(text_boxes):
-    # line_fields = []
-    # # group by lines:
-    # groups = {}
-    # for field in text_boxes:
-    #     # gid = str(field.groups)
-    #     gid = field.groups[0][4:]
-    #     if gid not in groups.keys():
-    #         groups[gid] = [field]
-    #     else:
-    #         groups[gid].append(field)
-
-    # #
-    # for _, fs in groups.items():
-    #     # sort by x-axis (since we are dealing with a single line)
-    #     fs.sort(key=lambda x: x.bbox.centroid[0])
-    #     f1 = fs[0]
-    #     if len(fs) < 2:
-    #         line_fields.append(f1)
-    #     for f2 in fs[1:]:
-    #         if f1.fieldtype == f2.fieldtype:
-    #             f1 = merge_horizontally((f1, f2), sep=" ")
-    #             if f2 == fs[-1]:
-    #                 line_fields.append(f1)
-    #         else:
-    #             line_fields.append(f1)
-    #             f1 = f2
-    #             if f2 == fs[-1]:
-    #                 line_fields.append(f1)
-
-    # # merging between individual lines within LI
-    # # group by fieldtype:
-    # groups = {}
-    # for ft in line_fields:
-    #     gid = ft.fieldtype
-    #     if gid not in groups.keys():
-    #         groups[gid] = [ft]
-    #     else:
-    #         groups[gid].append(ft)
-
-    # # NOTE: this should be done recursively, until no changes were made, because there could be many lines of text involved...
-    # line_fields_final = []
-    # # iterate over grouped fields
-    # for _, fs in groups.items():
-    #     # sorting is not necessary?
-    #     f1 = fs[0]
-    #     # f1.groups = []
-    #     if len(fs) < 2:
-    #         line_fields_final.append(f1)
-    #     for f2 in fs[1:]:
-    #         # f2.groups = []
-    #         f3 = merge_vertically((f1, f2), line_fields, sep="\n", THR=0.15)
-    #         if f3:
-    #             f1 = f3
-    #             if f2 == fs[-1]:
-    #                 line_fields_final.append(f1)
-    #         else:
-    #             line_fields_final.append(f1)
-    #             f1 = f2
-    #             if f2 == fs[-1]:
-    #                 line_fields_final.append(f1)
-    # return line_fields_final
-
     # group by fieldtype:
     groups = {}
     for field in text_boxes:
@@ -397,10 +332,9 @@ if __name__ == "__main__":
             gt_kile_fields_page = [field for field in gt_kile_fields if field.page == page]
             gt_li_fields_page = [field for field in gt_li_fields if field.page == page]
             img = document.page_image(page)
+            W, H = img.size
             img_preprocessed = np.array(img.resize((224, 224), Image.BICUBIC), dtype=np.uint8).transpose([2, 0, 1])
 
-            W, H = img.size
-            # W2, H2 = document.annotation.content["metadata"]["page_shapes"][page]
             for field in gt_kile_fields_page+gt_li_fields_page:
                 field.bbox = field.bbox.to_absolute_coords(W, H)
             ocr = document.ocr.get_all_words(page, snapped=True)
@@ -417,19 +351,6 @@ if __name__ == "__main__":
             # bboxes.append([normalize_bbox(np.array([d[0][0], d[0][1], d[0][2], d[0][3]], dtype=np.int32), (W, H)) for d in pt_info])
             bboxes_preprocessed = [normalize_bbox(bb, (W, H)) for bb in bboxes]
 
-            # tokenized_inputs = tokenizer(
-            #     text_tokens,
-            #     is_split_into_words=True,
-            #     add_special_tokens=True,
-            #     truncation=True,
-            #     padding=True,
-            #     max_length=512,
-            #     return_overflowing_tokens=True,  # important !!!
-            #     return_length=True,
-            #     verbose=True,
-            #     return_tensors="pt",
-            #     stride=config.stride,
-            # ).to(device)
             encoding = processor(
                 img_preprocessed,
                 text_tokens,
@@ -446,11 +367,6 @@ if __name__ == "__main__":
                 return_tensors="pt",
             )
 
-            # enc_word_ids = []
-            # enc_tokens = []
-            # for b_i in range(encoding["input_ids"].shape[0]):
-            #     enc_tokens.append(encoding[b_i].tokens)
-            #     enc_word_ids.append(encoding.word_ids(b_i))
             length = encoding.pop("length")
             overflow_to_sample_mapping = encoding.pop("overflow_to_sample_mapping")
 
@@ -460,7 +376,6 @@ if __name__ == "__main__":
                 else:
                     encoding[k] = torch.cat([x.unsqueeze(0) for x in encoding[k]]).to(device)
 
-            # outputs = model(**batch)
             outputs = model(**encoding)
 
             # multi-label prediction
@@ -730,11 +645,6 @@ if __name__ == "__main__":
                         field.bbox = field.bbox.to_relative_coords(W, H)
                         all_fields_final.append(field)
 
-        # TODO (michal.uricar)
-        # Finish the score computation (use average score of all tokens forming a field) + resolve the line_item_id for KILE and LIR correctly
-        # i.e. assign 0 for LIR where None + assign None for KILE where some number
-
-        #
         # add final predictions to docid_to_lir_predictions mapping
         docid_to_kile_predictions[doc_id] = [x for x in all_fields_final if x.fieldtype in KILE_CLASSES]
         docid_to_lir_predictions[doc_id] = [x for x in all_fields_final if x.fieldtype in LIR_CLASSES]

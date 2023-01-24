@@ -795,9 +795,12 @@ if __name__ == "__main__":
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        args.model_name, add_prefix_space=True if args.model_name == "roberta-base" else False
-    )
+    if "checkpoint" in args.model_name or "so_far_best" in args.model_name:
+        tokenizer = AutoTokenizer.from_pretrained(args.model_name)
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_name, add_prefix_space=True if (args.model_name == "roberta-base") else False
+        )
 
     data_collator = MyMLDataCollatorForTokenClassification(
         tokenizer=tokenizer, max_length=512, padding="longest"
@@ -931,28 +934,50 @@ if __name__ == "__main__":
     else:
         raise Exception("Unknown type for NLP backbone selected.")
 
-    config.use_2d_positional_embeddings = args.use_2d_positional_embeddings
-    config.use_1d_positional_embeddings = args.use_1d_positional_embeddings
-    config.use_new_2D_pos_emb = args.use_new_2D_pos_emb
-    config.pos_emb_dim = args.pos_emb_dim
-    config.quant_step_size = args.quant_step_size
-    config.stride = args.stride
-    config.bb_emb_dim = args.bb_emb_dim
-    config.tag_everything = args.tag_everything
-    config.num_labels = len(unique_entities)
-    config.id2label = id2label
-    config.label2id = label2id
-    config.model_name = args.model_name
-    config.use_bert = args.use_bert
-    config.use_roberta = args.use_roberta
-    config.use_BIO_format = args.use_BIO_format
-    config.use_2d_concat = args.use_2d_concat
-
     print(f"\n\n\n")
 
     # instantiate model
     if args.use_roberta:
-        # model = MyXLMRobertaForTokenClassification.from_pretrained(args.model_name, config=config)
+        # if "checkpoint" in args.model_name:
+        #     model = MyXLMRobertaMLForTokenClassification.from_pretrained(args.model_name)
+        # else:
+        #     config.use_2d_positional_embeddings = args.use_2d_positional_embeddings
+        #     config.use_1d_positional_embeddings = args.use_1d_positional_embeddings
+        #     config.use_new_2D_pos_emb = args.use_new_2D_pos_emb
+        #     config.pos_emb_dim = args.pos_emb_dim
+        #     config.quant_step_size = args.quant_step_size
+        #     config.stride = args.stride
+        #     config.bb_emb_dim = args.bb_emb_dim
+        #     config.tag_everything = args.tag_everything
+        #     config.num_labels = len(unique_entities)
+        #     config.id2label = id2label
+        #     config.label2id = label2id
+        #     config.model_name = args.model_name
+        #     config.use_bert = args.use_bert
+        #     config.use_roberta = args.use_roberta
+        #     config.use_BIO_format = args.use_BIO_format
+        #     config.use_2d_concat = args.use_2d_concat
+
+        #     model = MyXLMRobertaMLForTokenClassification.from_pretrained(
+        #         args.model_name, config=config
+        #     )
+        config.use_2d_positional_embeddings = args.use_2d_positional_embeddings
+        config.use_1d_positional_embeddings = args.use_1d_positional_embeddings
+        config.use_new_2D_pos_emb = args.use_new_2D_pos_emb
+        config.pos_emb_dim = args.pos_emb_dim
+        config.quant_step_size = args.quant_step_size
+        config.stride = args.stride
+        config.bb_emb_dim = args.bb_emb_dim
+        config.tag_everything = args.tag_everything
+        config.num_labels = len(unique_entities)
+        config.id2label = id2label
+        config.label2id = label2id
+        config.model_name = args.model_name
+        config.use_bert = args.use_bert
+        config.use_roberta = args.use_roberta
+        config.use_BIO_format = args.use_BIO_format
+        config.use_2d_concat = args.use_2d_concat
+
         model = MyXLMRobertaMLForTokenClassification.from_pretrained(
             args.model_name, config=config
         )

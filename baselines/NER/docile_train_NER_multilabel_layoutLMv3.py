@@ -656,6 +656,11 @@ if __name__ == "__main__":
         help="HuggingFace model to fine-tune",
     )
     parser.add_argument(
+        "--pretrained_weights",
+        type=Path,
+        default=None,
+    )
+    parser.add_argument(
         "--use_bert",
         action="store_true",
     )
@@ -822,8 +827,8 @@ if __name__ == "__main__":
     label2id = {v: k for k, v in id2label.items()}
 
     if args.arrow_format:
-        train_dataset = ArrowDataset.load_from_disk(args.hgdataset_dir_train)
         val_dataset = ArrowDataset.load_from_disk(args.hgdataset_dir_val)
+        train_dataset = ArrowDataset.load_from_disk(args.hgdataset_dir_train)
     else:
         # Prepare val dataset
         if args.load_from_preprocessed:
@@ -874,11 +879,15 @@ if __name__ == "__main__":
     config.num_labels = len(unique_entities)
     config.id2label = id2label
     config.label2id = label2id
+    config.stride = args.stride
 
     print(f"\n\n\n")
 
     # instantiate model
-    model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.model_name, config=config)
+    if args.pretrained_weights:
+        model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.pretrained_weights, config=config)
+    else:
+        model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.model_name, config=config)
 
     training_args = TrainingArguments(
         output_dir=os.path.join(args.output_dir),

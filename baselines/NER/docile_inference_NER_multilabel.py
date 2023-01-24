@@ -8,8 +8,8 @@ import numpy as np
 import torch
 from transformers import (AutoTokenizer, AutoConfig)
 from my_roberta_multilabel import MyXLMRobertaMLForTokenClassification
-from my_roberta import MyXLMRobertaForTokenClassification
-from my_bert import MyBertForTokenClassification
+# from my_roberta import MyXLMRobertaForTokenClassification
+# from my_bert import MyBertForTokenClassification
 
 from datasets import Dataset as ArrowDataset
 

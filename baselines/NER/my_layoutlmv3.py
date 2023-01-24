@@ -334,6 +334,7 @@ class MyLayoutLMv3Config(PretrainedConfig):
         self.num_channels = num_channels
         self.patch_size = patch_size
         self.classifier_dropout = classifier_dropout
+        self.stride = kwargs.get("stride", 0)
 
 
 
