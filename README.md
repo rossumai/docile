@@ -1,6 +1,24 @@
 # DocILE: Document Information Localization and Extraction Benchmark
 [![Tests](https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/rossumai/docile/actions/workflows/tests.yml)
 
+# Download dataset
+
+First you need to obtain a secret token by following the instructions at https://docile.rossum.ai/.
+
+Then you can use the `download_dataset.sh` script to download the datasets using curl:
+```bash
+./download_dataset.sh TOKEN annotated-trainval data/docile --unzip
+./download_dataset.sh TOKEN synthetic data/docile --unzip
+./download_dataset.sh TOKEN unlabeled data/docile --unzip
+```
+
+Run `./download_dataset.sh --help` for more options, including how to only show urls (to download
+with a different tool than curl), how to download smaller unlabeled/synthetic chunks or unlabeled
+dataset without pdfs (with pre-computed OCR only).
+
+Note that all datasets can be unzipped to the same folder. You can also work with the zipped
+dataset directly in a read-only mode (i.e., caching on disk for images must be turned off).
+
 # Evaluate predictions
 
 To evaluate predictions for tasks KILE or LIR, use the following command:
@@ -94,10 +112,6 @@ If your data is not `data/` do not forget to mount it to the docker container.
 ```bash
 make test
 ```
-
-# Data
-
-Download dataset from [google drive](https://drive.google.com/file/d/1I4sf75dSEgnVEWE7MUZQX7BG98ivAYk6/view?usp=share_link) and unzip it into the `data/` folder or work with the zipped dataset directly in a read-only mode (i.e., caching on disk for images must be turned off).
 
 ## Pre-computed OCR
 
