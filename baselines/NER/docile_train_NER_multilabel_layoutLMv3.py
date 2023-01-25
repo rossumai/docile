@@ -19,6 +19,7 @@ from transformers.models.layoutlmv3.configuration_layoutlmv3 import LayoutLMv3Co
 from transformers.models.layoutlmv3.processing_layoutlmv3 import LayoutLMv3Processor
 # from transformers.models.layoutlmv3.modeling_layoutlmv3 import Layou
 from my_layoutlmv3 import MyLayoutLMv3Config, MyLayoutLMv3ForTokenClassification
+from transformers.models.layoutlmv3.modeling_layoutlmv3 import LayoutLMv3ForTokenClassification
 from torchmetrics.classification import MultilabelStatScores
 import torchmetrics
 from PIL import Image
@@ -885,7 +886,14 @@ if __name__ == "__main__":
 
     # instantiate model
     if args.pretrained_weights:
-        model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.pretrained_weights, config=config)
+        model_weights = torch.load(args.pretrained_weights, map_location=device)
+        for k in list(model_weights["state_dict"].keys()):
+            v = model_weights["state_dict"].pop(k)
+            new_k = k.replace("model", "layoutlmv3")
+            model_weights["state_dict"][new_k] = v
+
+        model = MyLayoutLMv3ForTokenClassification(config=config)
+        model.load_state_dict(model_weights["state_dict"], strict=False)
     else:
         model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.model_name, config=config)
 

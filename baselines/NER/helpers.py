@@ -37,7 +37,7 @@ def bbox_str(bbox):
         return "<NONE>"
 
 
-def print_docile_fields(fields, fieldtype=None):
+def print_docile_fields(fields, fieldtype=None, ft_width=65):
     for i, ft in enumerate(fields):
         if ft:
             if (fieldtype and ft.fieldtype == fieldtype) or fieldtype is None:
@@ -53,7 +53,7 @@ def print_docile_fields(fields, fieldtype=None):
                 score = f"{ft.score:.2f}" if ft.score else "None"
                 print(
                     f"{i:05d}: ",
-                    f"ft='{fieldtype_1:<65}' |"
+                    f"ft='{fieldtype_1:<{ft_width}}' |"
                     f"page='{ft.page:<3}' |"
                     f"'{text:<30}' |"
                     f"{bbox_str(ft.bbox):<30} |"
