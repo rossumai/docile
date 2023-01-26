@@ -4,14 +4,19 @@ services:
     image: jupyter/base-notebook
     build:
       context: .
+      shm_size: '8gb'
       dockerfile: Dockerfile
       args:
         GPU_RUNTIME: nvidia
+    shm_size: '8gb'
+    group_add:
+      - "888"
     ports:
       - "${JUPYTER_PORT}:${JUPYTER_PORT}"
     command: poetry run jupyter lab --ip=0.0.0.0 --port=${JUPYTER_PORT} --allow-root
     volumes:
       - "./:/app/:cached"
+      - "/mnt/shared/ailabs/:/storage"
     deploy:
       resources:
         # consider reducing these limits
@@ -20,8 +25,10 @@ services:
           memory: 100GB
         reservations:
           devices:
-            - capabilities: [gpu]
+          - driver: "nvidia"
+            capabilities: [gpu]
     environment:
       CUDA_DEVICE_ORDER: PCI_BUS_ID
-      CUDA_VISIBLE_DEVICES: ''
+      # CUDA_VISIBLE_DEVICES: ''
+      # CUDA_VISIBLE_DEVICES: '0,1,2,3,4,5,6,7'
     privileged: true

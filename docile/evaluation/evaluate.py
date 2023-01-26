@@ -72,6 +72,23 @@ class EvaluationResult:
         }
         return cls(matchings, dct["dataset_name"], dct["iou_threshold"])
 
+    @classmethod
+    def from_files(cls, *paths: Sequence[Path]) -> "EvaluationResult":
+        """Load evaluation results for different tasks from multiple files at once."""
+        if len(paths) == 0:
+            raise ValueError("At least one path must be provided")
+        evaluations = [cls.from_file(path) for path in paths]
+        if len(set(evaluation.dataset_name for evaluation in evaluations)) != 1:
+            raise ValueError("Cannot load evaluations on different datasets")
+        if len(set(evaluation.iou_threshold for evaluation in evaluations)) != 1:
+            raise ValueError("Cannot load evaluations that used different config (iou_threshold)")
+        all_matchings = {}
+        for evaluation in evaluations:
+            if not set(all_matchings.keys()).isdisjoint(evaluation.task_to_docid_to_matching):
+                raise ValueError("Tasks in the evaluations are not disjoint")
+            all_matchings.update(evaluation.task_to_docid_to_matching)
+        return cls(all_matchings, evaluations[0].dataset_name, evaluations[0].iou_threshold)
+
     def get_primary_metric(self, task: str) -> float:
         """Return the primary metric used for DocILE'23 benchmark competition."""
         metric = TASK_TO_PRIMARY_METRIC_NAME[task]
