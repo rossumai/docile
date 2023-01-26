@@ -44,7 +44,7 @@ KILE_FIELDTYPES = [
     "vendor_tax_id",
 ]
 
-LIR_FIELDYPES = [
+LIR_FIELDTYPES = [
     "line_item_amount_gross",
     "line_item_amount_net",
     "line_item_code",
@@ -73,7 +73,7 @@ __all__ = [
     "Document",
     "Field",
     "KILE_FIELDTYPES",
-    "LIR_FIELDYPES",
+    "LIR_FIELDTYPES",
     "TableGrid",
     "load_predictions",
     "store_predictions",
