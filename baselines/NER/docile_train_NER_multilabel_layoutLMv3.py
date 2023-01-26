@@ -1,41 +1,47 @@
-import io
-import os
-import json
 import argparse
-from tqdm import tqdm
+import base64
+import io
+import json
+import os
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
+
 import numpy as np
 import torch
-from transformers import (AutoTokenizer, Trainer, TrainingArguments)
+import torchmetrics
+
 # import evaluate
-from data_collator import MyDataCollatorForTokenClassification, MyMLDataCollatorForTokenClassification, MyLayoutLMv3MLDataCollatorForTokenClassification
+from data_collator import (
+    MyDataCollatorForTokenClassification,
+    MyLayoutLMv3MLDataCollatorForTokenClassification,
+    MyMLDataCollatorForTokenClassification,
+)
+from datasets import Dataset as ArrowDataset
+from helpers import print_docile_fields, show_summary
+
+# from transformers.models.layoutlmv3.modeling_layoutlmv3 import Layou
+from my_layoutlmv3 import MyLayoutLMv3Config, MyLayoutLMv3ForTokenClassification
+
 # from my_roberta import MyXLMRobertaForTokenClassification, MyXLMRobertaConfig
 # from my_bert import MyBertForTokenClassification
 from my_roberta_multilabel import MyXLMRobertaMLForTokenClassification
-from transformers.models.bert.configuration_bert import BertConfig
-from transformers.models.roberta.configuration_roberta import RobertaConfig
-from transformers.models.layoutlmv3.configuration_layoutlmv3 import LayoutLMv3Config
-from transformers.models.layoutlmv3.processing_layoutlmv3 import LayoutLMv3Processor
-# from transformers.models.layoutlmv3.modeling_layoutlmv3 import Layou
-from my_layoutlmv3 import MyLayoutLMv3Config, MyLayoutLMv3ForTokenClassification
-from transformers.models.layoutlmv3.modeling_layoutlmv3 import LayoutLMv3ForTokenClassification
-from torchmetrics.classification import MultilabelStatScores
-import torchmetrics
 from PIL import Image
-import base64
-from io import BytesIO
-
-from datasets import Dataset as ArrowDataset
+from torchmetrics.classification import MultilabelStatScores
+from tqdm import tqdm
+from transformers import AutoTokenizer, Trainer, TrainingArguments
+from transformers.models.bert.configuration_bert import BertConfig
+from transformers.models.layoutlmv3.configuration_layoutlmv3 import LayoutLMv3Config
+from transformers.models.layoutlmv3.modeling_layoutlmv3 import LayoutLMv3ForTokenClassification
+from transformers.models.layoutlmv3.processing_layoutlmv3 import LayoutLMv3Processor
+from transformers.models.roberta.configuration_roberta import RobertaConfig
 
 from docile.dataset import Dataset
 from docile.dataset.bbox import BBox
 from docile.dataset.field import Field
+
 # from docile.evaluation.evaluate import Metric, evaluate_dataset
 from docile.evaluation.evaluate import evaluate_dataset
-
-from helpers import print_docile_fields, show_summary
-
 
 # metric = evaluate.load("seqeval")
 
@@ -116,7 +122,6 @@ def normalize_bbox(bbox, size):
         int(1000 * bbox[2] / size[0]),
         int(1000 * bbox[3] / size[1]),
     ]
-
 
 
 def tag_fields_with_entities(fields, unique_entities=[]):
@@ -200,7 +205,7 @@ class NERDataMaker:
         temp_processed_tables = []
         # for table_data in data:
         for i, page_data in enumerate(data):
-        # for i, (page_data, page_metadata) in enumerate(zip(data, metadata)):
+            # for i, (page_data, page_metadata) in enumerate(zip(data, metadata)):
             tokens_with_entities = tag_fields_with_entities(page_data, self.unique_entities)
             if tokens_with_entities:
                 if not have_unique_entities:
@@ -263,12 +268,17 @@ class NERDataMaker:
         if isinstance(idx, int):
             return _process_tokens_for_one_page(idx, tokens_with_encoded_entities, metadata)
         else:
-            return [_process_tokens_for_one_page(i+idx.start, tee, meta) for i, (tee, meta) in enumerate(zip(tokens_with_encoded_entities, metadata))]
+            return [
+                _process_tokens_for_one_page(i + idx.start, tee, meta)
+                for i, (tee, meta) in enumerate(zip(tokens_with_encoded_entities, metadata))
+            ]
 
     # def as_hf_dataset(self, tokenizer, tag_everything=False, stride=0):
     def as_hf_dataset(self, processor, tag_everything=False, stride=0):
-        from datasets import Features, Sequence, Value, Array2D, Array3D, Array4D
+        from datasets import Array2D, Array3D, Array4D
         from datasets import Dataset as ArrowDataset
+        from datasets import Features, Sequence, Value
+
         def tokenize_and_align_labels_unbatched(examples):
             tokenized_inputs = processor(
                 np.array(examples["img"], dtype=np.uint8),
@@ -290,7 +300,7 @@ class NERDataMaker:
             i = 0
             label = examples["ner_tags"]
             overflowing = tokenized_inputs[i].overflowing
-            for i in range(0, 1+len(overflowing)):
+            for i in range(0, 1 + len(overflowing)):
                 word_ids = tokenized_inputs[i].word_ids
                 previous_word_idx = None
                 label_ids = []
@@ -315,6 +325,7 @@ class NERDataMaker:
             tmp = np.zeros(N, dtype=bool)
             tmp[x] = 1
             return tmp
+
         for i, (pt, meta) in enumerate(zip(self.processed_tables, self.metadata)):
             ids.append(i)
             pt_tokens, pt_tags, pt_info = list(zip(*pt))
@@ -327,8 +338,17 @@ class NERDataMaker:
             base64_decoded = base64.b64decode(img_str)
             img = np.array(Image.open(io.BytesIO(base64_decoded)))
             #
-            images.append(img.transpose([2, 0, 1]))  # change order of dimensions (to have channels first)
-            bboxes.append([normalize_bbox(np.array([d[0][0], d[0][1], d[0][2], d[0][3]], dtype=np.int32), (W, H)) for d in pt_info])
+            images.append(
+                img.transpose([2, 0, 1])
+            )  # change order of dimensions (to have channels first)
+            bboxes.append(
+                [
+                    normalize_bbox(
+                        np.array([d[0][0], d[0][1], d[0][2], d[0][3]], dtype=np.int32), (W, H)
+                    )
+                    for d in pt_info
+                ]
+            )
         data = {
             "id": ids,
             "ner_tags": ner_tags,
@@ -336,13 +356,15 @@ class NERDataMaker:
             "bboxes": bboxes,
             "img": images,
         }
-        features = Features({
-            "tokens": Sequence(Value("string")),
-            "ner_tags": Array2D(shape=(None, len(self.unique_entities)), dtype="bool"),
-            "id": Value("int32"),
-            "bboxes": Array2D(shape=(None, 4), dtype="int32"),
-            "img": Array3D(shape=(3, 224, 224), dtype="uint8"),
-        })
+        features = Features(
+            {
+                "tokens": Sequence(Value("string")),
+                "ner_tags": Array2D(shape=(None, len(self.unique_entities)), dtype="bool"),
+                "id": Value("int32"),
+                "bboxes": Array2D(shape=(None, 4), dtype="int32"),
+                "img": Array3D(shape=(3, 224, 224), dtype="uint8"),
+            }
+        )
         ds = ArrowDataset.from_dict(data, features)
         tokenized_ds = ds.map(tokenize_and_align_labels_unbatched, batched=False)
         return tokenized_ds
@@ -593,6 +615,7 @@ def load_data(src: Path):
             )
     return out
 
+
 def store_data(dest: Path, data):
     out = []
     for table_data in data:
@@ -799,11 +822,18 @@ if __name__ == "__main__":
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_name, add_prefix_space=True if args.model_name=="roberta-base" else False)
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.model_name, add_prefix_space=True if args.model_name == "roberta-base" else False
+    )
     processor = LayoutLMv3Processor.from_pretrained(args.model_name, apply_ocr=False)
 
-    data_collator = MyMLDataCollatorForTokenClassification(
-        tokenizer=tokenizer, max_length=512, padding="longest"
+    # data_collator = MyMLDataCollatorForTokenClassification(
+    #     tokenizer=tokenizer, max_length=512, padding="longest"
+    # )
+    data_collator = MyLayoutLMv3MLDataCollatorForTokenClassification(
+        processor=processor,
+        max_length=512,
+        padding="longest",
     )
 
     # TODO (michal.uricar) 10.1.2023 new classes definition - modify this
@@ -813,7 +843,9 @@ if __name__ == "__main__":
         unique_entities = []
         # add class specific background tags
         # unique_entities.extend([f"O-{x.rstrip('_background')}" for x in classes[1:] if "background" in x])
-        unique_entities.extend([f"O-{x.rstrip('_background')}" for x in classes if "background" in x])
+        unique_entities.extend(
+            [f"O-{x.rstrip('_background')}" for x in classes if "background" in x]
+        )
         # add KILE and LIR class tags
         unique_entities.extend([f"B-{x}" for x in classes if "background" not in x])
         unique_entities.extend([f"I-{x}" for x in classes if "background" not in x])
@@ -834,46 +866,102 @@ if __name__ == "__main__":
         # Prepare val dataset
         if args.load_from_preprocessed:
             try:
-                val_data = load_data(args.load_from_preprocessed / args.dataset_name / "val_multilabel_preprocessed_withImgs.json")
-                val_metadata = load_metadata(args.load_from_preprocessed / args.dataset_name / "val_multilabel_metadata_withImgs.json")
+                val_data = load_data(
+                    args.load_from_preprocessed
+                    / args.dataset_name
+                    / "val_multilabel_preprocessed_withImgs.json"
+                )
+                val_metadata = load_metadata(
+                    args.load_from_preprocessed
+                    / args.dataset_name
+                    / "val_multilabel_metadata_withImgs.json"
+                )
             except Exception as ex:
-                print(f"WARNING: could not load val_data from {args.load_from_preprocessed}. Need to generate them again...")
-                val_data, val_metadata = get_data_from_docile("val", args.docile_path, overlap_thr=args.overlap_thr)
+                print(
+                    f"WARNING: could not load val_data from {args.load_from_preprocessed}. Need to generate them again..."
+                )
+                val_data, val_metadata = get_data_from_docile(
+                    "val", args.docile_path, overlap_thr=args.overlap_thr
+                )
         else:
-            val_data, val_metadata = get_data_from_docile("val", args.docile_path, overlap_thr=args.overlap_thr)
+            val_data, val_metadata = get_data_from_docile(
+                "val", args.docile_path, overlap_thr=args.overlap_thr
+            )
         if args.store_preprocessed:
             os.makedirs(args.store_preprocessed / args.dataset_name, exist_ok=True)
-            store_metadata(args.store_preprocessed / args.dataset_name / "val_multilabel_metadata_withImgs.json", val_metadata)
-            store_data(args.store_preprocessed / args.dataset_name / "val_multilabel_preprocessed_withImgs.json", val_data)
+            store_metadata(
+                args.store_preprocessed
+                / args.dataset_name
+                / "val_multilabel_metadata_withImgs.json",
+                val_metadata,
+            )
+            store_data(
+                args.store_preprocessed
+                / args.dataset_name
+                / "val_multilabel_preprocessed_withImgs.json",
+                val_data,
+            )
 
-        val_dm = NERDataMaker(val_data, val_metadata, unique_entities=unique_entities, use_BIO_format=True)
+        val_dm = NERDataMaker(
+            val_data, val_metadata, unique_entities=unique_entities, use_BIO_format=True
+        )
         val_dataset = val_dm.as_hf_dataset(
             processor=processor, stride=args.stride, tag_everything=args.tag_everything
         )
         if args.save_datasets_in_arrow_format:
-            val_dataset.save_to_disk(args.save_datasets_in_arrow_format / f"NER_{args.hgdataset_dir_val.name}")
+            val_dataset.save_to_disk(
+                args.save_datasets_in_arrow_format / f"NER_{args.hgdataset_dir_val.name}"
+            )
 
         # Prepare train dataset
         if args.load_from_preprocessed:
             try:
-                train_data = load_data(args.load_from_preprocessed / args.dataset_name / "train_multilabel_preprocessed_withImgs.json")
-                train_metadata = load_metadata(args.load_from_preprocessed / args.dataset_name / "train_multilabel_metadata_withImgs.json")
+                train_data = load_data(
+                    args.load_from_preprocessed
+                    / args.dataset_name
+                    / "train_multilabel_preprocessed_withImgs.json"
+                )
+                train_metadata = load_metadata(
+                    args.load_from_preprocessed
+                    / args.dataset_name
+                    / "train_multilabel_metadata_withImgs.json"
+                )
             except Exception:
-                print(f"WARNING: could not load train_data from {args.load_from_preprocessed}. Need to generate them again...")
-                train_data, train_metadata = get_data_from_docile("train", args.docile_path, overlap_thr=args.overlap_thr)
+                print(
+                    f"WARNING: could not load train_data from {args.load_from_preprocessed}. Need to generate them again..."
+                )
+                train_data, train_metadata = get_data_from_docile(
+                    "train", args.docile_path, overlap_thr=args.overlap_thr
+                )
         else:
-            train_data, train_metadata = get_data_from_docile("train", args.docile_path, overlap_thr=args.overlap_thr)
+            train_data, train_metadata = get_data_from_docile(
+                "train", args.docile_path, overlap_thr=args.overlap_thr
+            )
         if args.store_preprocessed:
             os.makedirs(args.store_preprocessed / args.dataset_name, exist_ok=True)
-            store_data(args.store_preprocessed / args.dataset_name / "train_multilabel_preprocessed_withImgs.json", train_data)
-            store_metadata(args.store_preprocessed / args.dataset_name / "train_multilabel_metadata_withImgs.json", train_metadata)
+            store_data(
+                args.store_preprocessed
+                / args.dataset_name
+                / "train_multilabel_preprocessed_withImgs.json",
+                train_data,
+            )
+            store_metadata(
+                args.store_preprocessed
+                / args.dataset_name
+                / "train_multilabel_metadata_withImgs.json",
+                train_metadata,
+            )
 
-        train_dm = NERDataMaker(train_data, train_metadata, unique_entities=unique_entities, use_BIO_format=True)
+        train_dm = NERDataMaker(
+            train_data, train_metadata, unique_entities=unique_entities, use_BIO_format=True
+        )
         train_dataset = train_dm.as_hf_dataset(
             processor=processor, stride=args.stride, tag_everything=args.tag_everything
         )
         if args.save_datasets_in_arrow_format:
-            train_dataset.save_to_disk(args.save_datasets_in_arrow_format / f"NER_{args.hgdataset_dir_train.name}")
+            train_dataset.save_to_disk(
+                args.save_datasets_in_arrow_format / f"NER_{args.hgdataset_dir_train.name}"
+            )
 
     config = LayoutLMv3Config.from_pretrained(args.model_name)
 
@@ -1021,8 +1109,12 @@ if __name__ == "__main__":
     trainer.log_metrics("train-eval", metrics)
 
     if args.save_datasets_in_arrow_format:
-        print(f"HuggingFace Dataset TRN stored to: {args.save_datasets_in_arrow_format / f'NER_{args.hgdataset_dir_train.name}'}")
-        print(f"HuggingFace Dataset VAL stored to: {args.save_datasets_in_arrow_format / f'NER_{args.hgdataset_dir_test.name}'}")
+        print(
+            f"HuggingFace Dataset TRN stored to: {args.save_datasets_in_arrow_format / f'NER_{args.hgdataset_dir_train.name}'}"
+        )
+        print(
+            f"HuggingFace Dataset VAL stored to: {args.save_datasets_in_arrow_format / f'NER_{args.hgdataset_dir_test.name}'}"
+        )
 
     print(f"Tensorboard logs: {os.path.join(args.output_dir, 'runs')}")
     print(f"Best model saved to {best_model_path}")

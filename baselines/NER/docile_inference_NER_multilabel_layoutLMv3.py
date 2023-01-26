@@ -1,88 +1,87 @@
-import os
-import json
 import argparse
-from tqdm import tqdm
+import json
+import os
 from datetime import datetime
 from pathlib import Path
+
 import numpy as np
 import torch
-from transformers import (AutoTokenizer, AutoConfig)
-from my_layoutlmv3 import MyLayoutLMv3Config, MyLayoutLMv3ForTokenClassification
 from data_collator import MyLayoutLMv3MLDataCollatorForTokenClassification
-from transformers.models.layoutlmv3.processing_layoutlmv3 import LayoutLMv3Processor
-from PIL import Image
-
 from datasets import Dataset as ArrowDataset
+from helpers import print_docile_fields, show_summary
+from my_layoutlmv3 import MyLayoutLMv3Config, MyLayoutLMv3ForTokenClassification
+from PIL import Image
+from tqdm import tqdm
+from transformers import AutoConfig, AutoTokenizer
+from transformers.models.layoutlmv3.processing_layoutlmv3 import LayoutLMv3Processor
 
 from docile.dataset import Dataset
-from docile.dataset.field import Field
 from docile.dataset.bbox import BBox
+from docile.dataset.field import Field
 from docile.evaluation.evaluate import evaluate_dataset
-
-from helpers import print_docile_fields, show_summary
 
 # KILE classes
 KILE_CLASSES = [
-    'account_num',
-    'amount_due',
-    'amount_paid',
-    'amount_total_gross',
-    'amount_total_net',
-    'amount_total_tax',
-    'bank_num',
-    'bic',
-    'currency_code_amount_due',
-    'customer_billing_address',
-    'customer_billing_name',
-    'customer_delivery_address',
-    'customer_delivery_name',
-    'customer_id',
-    'customer_order_id',
-    'customer_other_address',
-    'customer_other_name',
-    'customer_registration_id',
-    'customer_tax_id',
-    'date_due',
-    'date_issue',
-    'document_id',
-    'iban',
-    'order_id',
-    'payment_terms',
-    'tax_detail_gross',
-    'tax_detail_net',
-    'tax_detail_rate',
-    'tax_detail_tax',
+    "account_num",
+    "amount_due",
+    "amount_paid",
+    "amount_total_gross",
+    "amount_total_net",
+    "amount_total_tax",
+    "bank_num",
+    "bic",
+    "currency_code_amount_due",
+    "customer_billing_address",
+    "customer_billing_name",
+    "customer_delivery_address",
+    "customer_delivery_name",
+    "customer_id",
+    "customer_order_id",
+    "customer_other_address",
+    "customer_other_name",
+    "customer_registration_id",
+    "customer_tax_id",
+    "date_due",
+    "date_issue",
+    "document_id",
+    "iban",
+    "order_id",
+    "payment_terms",
+    "tax_detail_gross",
+    "tax_detail_net",
+    "tax_detail_rate",
+    "tax_detail_tax",
     # 'variable_symbol',
-    'payment_reference',
-    'vendor_address',
-    'vendor_email',
-    'vendor_name',
-    'vendor_order_id',
-    'vendor_registration_id',
-    'vendor_tax_id',
+    "payment_reference",
+    "vendor_address",
+    "vendor_email",
+    "vendor_name",
+    "vendor_order_id",
+    "vendor_registration_id",
+    "vendor_tax_id",
 ]
 
 # LIR classes
 LIR_CLASSES = [
-    'line_item_amount_gross',
-    'line_item_amount_net',
-    'line_item_code',
-    'line_item_currency',
-    'line_item_date',
-    'line_item_description',
-    'line_item_discount_amount',
-    'line_item_discount_rate',
-    'line_item_hts_number',
-    'line_item_order_id',
-    'line_item_person_name',
-    'line_item_position',
-    'line_item_quantity',
-    'line_item_tax',
-    'line_item_tax_rate',
-    'line_item_unit_price_gross',
-    'line_item_unit_price_net',
-    'line_item_units_of_measure',
-    'line_item_weight',
+    "line_item_amount_gross",
+    "line_item_amount_net",
+    "line_item_code",
+    "line_item_currency",
+    "line_item_date",
+    "line_item_description",
+    "line_item_discount_amount",
+    "line_item_discount_rate",
+    "line_item_hts_number",
+    "line_item_order_id",
+    "line_item_person_name",
+    "line_item_position",
+    "line_item_quantity",
+    "line_item_tax",
+    "line_item_tax_rate",
+    "line_item_unit_price_gross",
+    "line_item_unit_price_net",
+    "line_item_units_of_measure",
+    "line_item_weight",
 ]
 
 
@@ -238,7 +237,14 @@ def merge_text_boxes(text_boxes):
     # 1. attempt simply merge all fields of the given detected type
     final_fields = []
     for ft, fs in groups.items():
-        new_field = Field(bbox=fs[0].bbox, page=fs[0].page, line_item_id=fs[0].line_item_id, fieldtype=ft, score=0.0, text="")
+        new_field = Field(
+            bbox=fs[0].bbox,
+            page=fs[0].page,
+            line_item_id=fs[0].line_item_id,
+            fieldtype=ft,
+            score=0.0,
+            text="",
+        )
         last_line = int(fs[0].groups[0][4:])
         for field in fs:
             curr_line = int(field.groups[0][4:])
@@ -272,7 +278,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--docile_path",
         type=Path,
-        default=Path("/storage/pif_documents/dataset_exports/docile221221-0/")
+        default=Path("/storage/pif_documents/dataset_exports/docile221221-0/"),
     )
     parser.add_argument(
         "--overlap_thr",
@@ -318,11 +324,13 @@ if __name__ == "__main__":
     processor = LayoutLMv3Processor.from_pretrained("microsoft/layoutlmv3-base", apply_ocr=False)
 
     # model = MyXLMRobertaMLForTokenClassification.from_pretrained(args.checkpoint, config=config).to(device)
-    model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.checkpoint, config=config).to(device)
+    model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.checkpoint, config=config).to(
+        device
+    )
 
     model.eval()
 
-    collator = MyLayoutLMv3MLDataCollatorForTokenClassification(processor)
+    # collator = MyLayoutLMv3MLDataCollatorForTokenClassification(processor)
 
     for document in tqdm(dataset):
         doc_id = document.docid
@@ -340,9 +348,11 @@ if __name__ == "__main__":
             gt_li_fields_page = [field for field in gt_li_fields if field.page == page]
             img = document.page_image(page)
             W, H = img.size
-            img_preprocessed = np.array(img.resize((224, 224), Image.BICUBIC), dtype=np.uint8).transpose([2, 0, 1])
+            img_preprocessed = np.array(
+                img.resize((224, 224), Image.BICUBIC), dtype=np.uint8
+            ).transpose([2, 0, 1])
 
-            for field in gt_kile_fields_page+gt_li_fields_page:
+            for field in gt_kile_fields_page + gt_li_fields_page:
                 field.bbox = field.bbox.to_absolute_coords(W, H)
             ocr = document.ocr.get_all_words(page, snapped=True)
             for ocr_field in ocr:
@@ -403,7 +413,9 @@ if __name__ == "__main__":
                     # start_i = model.config.stride + 1
                     star_i = stride + 1
                     # end_i = np.where(np.array(enc_tokens[b_i]) == processor.tokenizer.sep_token)[0][0]
-                    end_i = np.where(np.array(encoding[b_i].tokens) == processor.tokenizer.sep_token)[0][0]
+                    end_i = np.where(
+                        np.array(encoding[b_i].tokens) == processor.tokenizer.sep_token
+                    )[0][0]
                 else:
                     start_i = 1
                     end_i = -1
@@ -411,7 +423,9 @@ if __name__ == "__main__":
                 word_ids.extend(encoding.word_ids(b_i)[start_i:end_i])
                 tokens.extend(
                     # tokenizer.convert_ids_to_tokens(tokenized_inputs["input_ids"].tolist()[b_i])[start_i:end_i]
-                    processor.tokenizer.convert_ids_to_tokens(encoding["input_ids"].tolist()[b_i])[start_i:end_i]
+                    processor.tokenizer.convert_ids_to_tokens(encoding["input_ids"].tolist()[b_i])[
+                        start_i:end_i
+                    ]
                 )
                 predictions_flattened.extend(predictions[b_i].tolist()[start_i:end_i])
                 # confs_flattened.extend(confs[b_i].tolist()[start_i:end_i])
@@ -420,7 +434,9 @@ if __name__ == "__main__":
             valid_ids = np.where(word_ids != None)
             pred_classes_full = []
             for pred, score in zip(predictions_flattened, scores_flattened):
-                pred_classes_full.append([(model.config.id2label[x], score[x]) for x in np.nonzero(pred)[0]])
+                pred_classes_full.append(
+                    [(model.config.id2label[x], score[x]) for x in np.nonzero(pred)[0]]
+                )
             # post-process predicted classes (namely split into KILE, LIR and LI)
             pred_classes_groupped = {}
             kile = []
@@ -467,8 +483,8 @@ if __name__ == "__main__":
                     sub_token_classes = []
                     sub_token_scores = []
                     for all_pred_for_sub_token in pred_KILE:
-                        sub_token_classes.append([None]*N_kp)
-                        sub_token_scores.append([None]*N_kp)
+                        sub_token_classes.append([None] * N_kp)
+                        sub_token_scores.append([None] * N_kp)
                         # for sub_token_pred in all_pred_for_sub_token:
                         for tmp_i, sub_token_pred in enumerate(all_pred_for_sub_token):
                             sub_token_classes[-1][tmp_i] = sub_token_pred[0]
@@ -486,7 +502,7 @@ if __name__ == "__main__":
                             kile_score.append(sts[:, si][0])
                         else:
                             # inconsistent prediction - just take the maximum scoring one for the whole word for now
-                            sts[:, si] = np.where(sts[:, si]==None, 0, sts[:, si])
+                            sts[:, si] = np.where(sts[:, si] == None, 0, sts[:, si])
                             maxidx = sts[:, si].argmax()
                             tmp = stc[:, si][maxidx]
                             kile_pred.append(tmp[2:] if tmp[0] != "O" else "background")
@@ -494,7 +510,9 @@ if __name__ == "__main__":
                 else:
                     # just 1 class predicted for each sub-token -> we can use the same approach as for single-label
                     pred_KILE = [item for sublist in pred_KILE for item in sublist]
-                    pred_ents_KILE = np.array([x[0][2:] if x[0][0] != "O" else "background" for x in pred_KILE])    # remove the IOB tag
+                    pred_ents_KILE = np.array(
+                        [x[0][2:] if x[0][0] != "O" else "background" for x in pred_KILE]
+                    )  # remove the IOB tag
                     pred_ents_KILE_score = np.array([x[1] for x in pred_KILE])
                     if len(pred_ents_KILE):
                         if (pred_ents_KILE == pred_ents_KILE[0]).all():
@@ -513,7 +531,9 @@ if __name__ == "__main__":
                 # LIR class
                 pred_LIR = pred_classes_groupped["LIR"][idxs].tolist()
                 pred_LIR = [item for sublist in pred_LIR for item in sublist]
-                pred_ents_LIR = np.array([x[0][2:] if x[0][0] != "O" else "background" for x in pred_LIR])      # remove the IOB tag
+                pred_ents_LIR = np.array(
+                    [x[0][2:] if x[0][0] != "O" else "background" for x in pred_LIR]
+                )  # remove the IOB tag
                 pred_ents_LIR_score = np.array([x[1] for x in pred_LIR])
                 if len(pred_ents_LIR):
                     if (pred_ents_LIR == pred_ents_LIR[0]).all():
@@ -561,7 +581,11 @@ if __name__ == "__main__":
                 if li_pred == "B-LI":
                     li_id += 1
 
-                if isinstance(kile_pred, str) and kile_pred == "background" and lir_pred == "background":
+                if (
+                    isinstance(kile_pred, str)
+                    and kile_pred == "background"
+                    and lir_pred == "background"
+                ):
                     # TODO: add just one field
                     tmp_field_labels.append(
                         Field(
@@ -658,8 +682,12 @@ if __name__ == "__main__":
                         all_fields_final.append(field)
 
         # add final predictions to docid_to_lir_predictions mapping
-        docid_to_kile_predictions[doc_id] = [x for x in all_fields_final if x.fieldtype in KILE_CLASSES]
-        docid_to_lir_predictions[doc_id] = [x for x in all_fields_final if x.fieldtype in LIR_CLASSES]
+        docid_to_kile_predictions[doc_id] = [
+            x for x in all_fields_final if x.fieldtype in KILE_CLASSES
+        ]
+        docid_to_lir_predictions[doc_id] = [
+            x for x in all_fields_final if x.fieldtype in LIR_CLASSES
+        ]
         if args.store_intermediate_results:
             intermediate_results[doc_id] = intermediate_fields
 
