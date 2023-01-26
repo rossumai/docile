@@ -10,7 +10,7 @@ from typing import Dict, List, Mapping, Sequence, Tuple, Union
 from tabulate import tabulate
 from tqdm import tqdm
 
-from docile.dataset import KILE_FIELDTYPES, LIR_FIELDYPES, Dataset, Field
+from docile.dataset import KILE_FIELDTYPES, LIR_FIELDTYPES, Dataset, Field
 from docile.evaluation.average_precision import compute_average_precision
 from docile.evaluation.line_item_matching import get_lir_matches
 from docile.evaluation.pcc import get_document_pccs
@@ -170,7 +170,7 @@ class EvaluationResult:
                 rows = [["**-> micro average**"] + [summary_metrics[m] for m in METRIC_NAMES]]
 
                 if include_fieldtypes:
-                    fieldtypes = KILE_FIELDTYPES if task == "kile" else LIR_FIELDYPES
+                    fieldtypes = KILE_FIELDTYPES if task == "kile" else LIR_FIELDTYPES
                     for fieldtype in fieldtypes:
                         metrics = self.get_metrics(
                             task=task, same_text=same_text, fieldtype=fieldtype, docid=docid
