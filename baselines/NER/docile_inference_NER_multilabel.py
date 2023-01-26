@@ -339,6 +339,10 @@ if __name__ == "__main__":
         "--output_dir",
         type=Path,
     )
+    parser.add_argument(
+        "--store_intermediate_results",
+        action="store_true",
+    )
     args, unknown_args = parser.parse_known_args()
 
     print(f"{datetime.now()} Started.")
@@ -358,6 +362,8 @@ if __name__ == "__main__":
     docid_to_kile_predictions = {}
     docid_to_lir_predictions = {}
 
+    intermediate_results = {}
+
     config = AutoConfig.from_pretrained(args.checkpoint)
     tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
 
@@ -375,6 +381,7 @@ if __name__ == "__main__":
         pred_li_fields = []
         pred_li_fields_final = []
         all_fields_final = []
+        intermediate_fields = []
         for page in range(document.page_count):
             gt_kile_fields_page = [field for field in gt_kile_fields if field.page == page]
             gt_li_fields_page = [field for field in gt_li_fields if field.page == page]
@@ -686,6 +693,11 @@ if __name__ == "__main__":
             # out = []
             for _, fs in line_item_groups.items():
                 # line_items = merge_text_boxes(fs)
+                if args.store_intermediate_results:
+                    for field in fs:
+                        field2 = Field.from_dict(field.to_dict())
+                        field2.bbox = field2.bbox.to_relative_coords(W, H)
+                        intermediate_fields.append(field2)
                 line_items = merge_text_boxes([x for x in fs if x.fieldtype != "background"])
                 for field in line_items:
                     # skip background fields
@@ -694,10 +706,32 @@ if __name__ == "__main__":
                         field.bbox = field.bbox.to_relative_coords(W, H)
                         all_fields_final.append(field)
 
-        #
         # add final predictions to docid_to_lir_predictions mapping
         docid_to_kile_predictions[doc_id] = [x for x in all_fields_final if x.fieldtype in KILE_CLASSES]
         docid_to_lir_predictions[doc_id] = [x for x in all_fields_final if x.fieldtype in LIR_CLASSES]
+        if args.store_intermediate_results:
+            intermediate_results[doc_id] = intermediate_fields
+
+    # Store intermediate results
+    if args.store_intermediate_results:
+        predictions_to_store = {}
+        for k, v in intermediate_results.items():
+            predictions_to_store[k] = []
+            for field in v:
+                predictions_to_store[k].append(
+                    {
+                        "bbox": field.bbox.to_tuple(),
+                        "page": field.page,
+                        "score": field.score,
+                        "text": field.text,
+                        "fieldtype": field.fieldtype,
+                        "line_item_id": field.line_item_id,
+                        "groups": field.groups,
+                    }
+                )
+        out_path = args.output_dir / f"{args.split}_intermediate_predictions.json"
+        with open(out_path, "w") as json_file:
+            json.dump(predictions_to_store, json_file)
 
     # Store predictions
     predictions_to_store = {}
@@ -748,9 +782,11 @@ if __name__ == "__main__":
     # KILE
     evaluation_result_KILE = evaluate_dataset(dataset, docid_to_kile_predictions, {})
     print(evaluation_result_KILE.print_report())
+    evaluation_result_KILE.to_file(args.output_dir / f"{args.split}_results_KILE.json")
 
     # LIR
     evaluation_result_LIR = evaluate_dataset(dataset, {}, docid_to_lir_predictions)
     print(evaluation_result_LIR.print_report())
+    evaluation_result_LIR.to_file(args.output_dir / f"{args.split}_results_LIR.json")
 
     print(f"{datetime.now()} Finished.")

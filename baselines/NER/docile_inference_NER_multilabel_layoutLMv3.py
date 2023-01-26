@@ -733,9 +733,11 @@ if __name__ == "__main__":
     # KILE
     evaluation_result_KILE = evaluate_dataset(dataset, docid_to_kile_predictions, {})
     print(evaluation_result_KILE.print_report())
+    evaluation_result_KILE.to_file(args.output_dir / f"{args.split}_results_KILE.json")
 
     # LIR
     evaluation_result_LIR = evaluate_dataset(dataset, {}, docid_to_lir_predictions)
     print(evaluation_result_LIR.print_report())
+    evaluation_result_LIR.to_file(args.output_dir / f"{args.split}_results_LIR.json")
 
     print(f"{datetime.now()} Finished.")
