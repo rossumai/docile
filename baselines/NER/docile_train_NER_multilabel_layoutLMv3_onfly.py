@@ -1208,14 +1208,18 @@ if __name__ == "__main__":
 
     # instantiate model
     if args.pretrained_weights:
-        model_weights = torch.load(args.pretrained_weights, map_location=device)
-        for k in list(model_weights["state_dict"].keys()):
-            v = model_weights["state_dict"].pop(k)
-            new_k = k.replace("model", "layoutlmv3")
-            model_weights["state_dict"][new_k] = v
 
-        model = MyLayoutLMv3ForTokenClassification(config=config)
-        model.load_state_dict(model_weights["state_dict"], strict=False)
+        if args.pretrained_weights.is_dir():
+            model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.model_name, config=config)
+        elif args.pretrained_weights.is_file():
+            model_weights = torch.load(args.pretrained_weights, map_location=device)
+            for k in list(model_weights["state_dict"].keys()):
+                v = model_weights["state_dict"].pop(k)
+                new_k = k.replace("model", "layoutlmv3")
+                model_weights["state_dict"][new_k] = v
+
+            model = MyLayoutLMv3ForTokenClassification(config=config)
+            model.load_state_dict(model_weights["state_dict"], strict=False)
     else:
         model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.model_name, config=config)
 
