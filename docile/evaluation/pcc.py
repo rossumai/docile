@@ -10,7 +10,7 @@ from docile.dataset import BBox, Document, Field
 logger = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(slots=True, frozen=True)
+@dataclasses.dataclass(frozen=True)
 class PCC:
     """Class for a single Pseudo-Character Center (PCC), i.e., a position in the document."""
 
@@ -39,14 +39,15 @@ class PCCSet:
         # [bbox.left, bbox.right] and all pccs between [bbox.top, bbox.bottom] and return pccs in
         # the intersection of these two sets.
         sorted_x_pccs = self._page_to_sorted_x_pccs[page]
-        sorted_y_pccs = self._page_to_sorted_y_pccs[page]
-
-        i_l = bisect_left(sorted_x_pccs, bbox.left, key=lambda p: p.x)
-        i_r = bisect_right(sorted_x_pccs, bbox.right, key=lambda p: p.x)
+        sorted_x_pccs_x_only = [pcc.x for pcc in sorted_x_pccs]
+        i_l = bisect_left(sorted_x_pccs_x_only, bbox.left)
+        i_r = bisect_right(sorted_x_pccs_x_only, bbox.right)
         x_subset = set(sorted_x_pccs[i_l:i_r])
 
-        i_t = bisect_left(sorted_y_pccs, bbox.top, key=lambda p: p.y)
-        i_b = bisect_right(sorted_y_pccs, bbox.bottom, key=lambda p: p.y)
+        sorted_y_pccs = self._page_to_sorted_y_pccs[page]
+        sorted_y_pccs_y_only = [pcc.y for pcc in sorted_x_pccs]
+        i_t = bisect_left(sorted_y_pccs_y_only, bbox.top)
+        i_b = bisect_right(sorted_y_pccs_y_only, bbox.bottom)
         y_subset = set(sorted_y_pccs[i_t:i_b])
 
         return x_subset.intersection(y_subset)
