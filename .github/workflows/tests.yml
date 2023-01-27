@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Python 3.10
+      - name: Install Python 3.8
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.8'
 
       - name: Pre-Commit
         uses: pre-commit/action@v3.0.0
@@ -23,24 +23,28 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Python 3.10
+      - name: Install Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: ${{ matrix.python-version }}
 
       - name: Cache Poetry Install
         uses: actions/cache@v2
         with:
           path: ~/.local
-          key: poetry-1.2.2
+          key: poetry-1.3.2
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
         with:
-          version: 1.2.2
+          version: 1.3.2
           virtualenvs-create: true
           virtualenvs-in-project: true
 
