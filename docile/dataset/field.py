@@ -63,6 +63,17 @@ class Field:
 
         return (self.use_only_for_ap, -score)
 
+    def __str__(self) -> str:
+        return repr(self)
+
+    def __repr__(self) -> str:
+        dataclass_fields_str = ", ".join(
+            f"{dataclass_field.name}={getattr(self, dataclass_field.name)!r}"
+            for dataclass_field in dataclasses.fields(self)
+            if getattr(self, dataclass_field.name) != getattr(dataclass_field, "default", None)
+        )
+        return f"Field({dataclass_fields_str})"
+
 
 def store_predictions(path: Path, docid_to_predictions: Mapping[str, Sequence[Field]]) -> None:
     path.write_text(
