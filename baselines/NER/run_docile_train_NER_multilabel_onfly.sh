@@ -26,10 +26,12 @@ DATASET="docile221221-0_synthetic"
 # STORE_PREPROCESSED="--store_preprocessed /storage/table_extraction/datasets/docile221221-0/fullpage_multilabel_v3"
 # LOAD_PREPROCESSED="--load_from_preprocessed /storage/table_extraction/datasets/docile221221-0/fullpage_multilabel_v3"
 
-DATA="--dataset_name ${DATASET} --docile_path /storage/pif_documents/dataset_exports/docile221221-0/ --on_fly_dataset --dataset_split synthetic "
+DATA="--dataset_name ${DATASET} --docile_path /storage/pif_documents/dataset_exports/docile221221-0/ --on_fly_dataset --dataset_split synthetic "    # Run with this for creating the synthetic checkpoint
+# DATA="--dataset_name ${DATASET} --docile_path /storage/pif_documents/dataset_exports/docile221221-0/ --on_fly_dataset --dataset_split train "  # Run with this for training from the synthetic checkpoint
 # TRAIN_PARAMS="--train_bs 32 --test_bs 32 --save_total_limit 3 --weight_decay 0.001 --lr 2e-5 --num_epochs 150 --gradient_accumulation_steps 1 --warmup_ratio 0 --dataloader_num_workers 8"
 TRAIN_PARAMS="--train_bs 32 --test_bs 32 --save_total_limit 3 --weight_decay 0.001 --lr 2e-5 --num_epochs 30 --gradient_accumulation_steps 1 --warmup_ratio 0 --dataloader_num_workers 8"
-MODEL="--model_name roberta-base --use_roberta --stride 0 --use_BIO_format "
+MODEL="--model_name roberta-base --use_roberta --stride 0 --use_BIO_format "        # Use this for the training initialized from HuggingFace checkpoint
+# MODEL="--model_name /path/to/pre-trained-checkpoint --use_roberta --stride 0 --use_BIO_format "   # Use this for training initialized from out pretrained checkpoint
 # MODEL="--model_name roberta-base --use_roberta --stride 0 --use_BIO_format --stride 128 "
 
 # OUT_DIR="/storage/table_extraction/trainings/fullpage_multilabel/${DATASET}/RoBERTa_base_gas4_wr_0_5/${TIMESTAMP}"
