@@ -64,7 +64,7 @@ class DocumentOCR(CachedObject[Dict]):
         page
             Page number (0-based) for which to get all OCR words.
         snapped
-            If False, use original detections. If True, use boundign boxes snapped to the text.
+            If False, use original detections. If True, use bounding boxes snapped to the text.
         use_cached_snapping
             Only used if `snapped=True`. If True, the OCR cache (including the files on disk) is
             used to load/store the snapped bounding boxes.
@@ -77,7 +77,8 @@ class DocumentOCR(CachedObject[Dict]):
             `functools.partial(document.page_image, page)`.
         """
         # Snapped bboxes are added to the dictionary, so copy the dict first if snapping is on.
-        ocr_dict = copy.deepcopy(self.content) if snapped else self.content
+        ocr_dict_original = self.content
+        ocr_dict = copy.deepcopy(ocr_dict_original) if snapped else ocr_dict_original
 
         words = []
 
@@ -91,7 +92,7 @@ class DocumentOCR(CachedObject[Dict]):
                     words.append(Field(text=word["value"], bbox=bbox, page=page))
 
         # If cached snapping is used and the snapping was not pre-computed, store it in the file.
-        if use_cached_snapping and ocr_dict != self.content:
+        if snapped and use_cached_snapping and ocr_dict != ocr_dict_original:
             self.overwrite(ocr_dict)
 
         return words

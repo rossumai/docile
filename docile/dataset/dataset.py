@@ -3,7 +3,7 @@ import logging
 import os
 from pathlib import Path
 from random import Random
-from typing import Iterable, List, Optional, Sequence, Union, overload
+from typing import Iterator, List, Optional, Sequence, Union, overload
 
 from tqdm import tqdm
 
@@ -73,8 +73,14 @@ class Dataset:
                 f"Passed docids do not match the content of the index file for split {split_name}."
             )
         docids = docids if docids is not None else docids_from_file
+        assert docids is not None  # this is guaranteed thanks to the checks above
 
-        preload = load_annotations or load_ocr
+        if load_ocr and len(docids) > 10000:
+            logger.warning(
+                f"Loading OCR for {len(docids)} documents will have a big memory footprint."
+            )
+
+        no_progress_bar = not load_annotations and not load_ocr and len(docids) <= 10000
         documents = [
             Document(
                 docid=docid,
@@ -84,7 +90,7 @@ class Dataset:
                 cache_images=cache_images,
             )
             for docid in tqdm(
-                docids, desc=f"Loading documents for {self.name}", disable=not preload
+                docids, desc=f"Loading documents for {self.name}", disable=no_progress_bar
             )
         ]
         self._set_documents(documents)
@@ -183,11 +189,17 @@ class Dataset:
         split_name = f"{self.split_name}[sample({sample_size},seed={seed})]"
         return self.from_documents(split_name, sample_documents, self.cache_images)
 
-    def __iter__(self) -> Iterable[Document]:
-        return iter(self.documents)
+    def __iter__(self) -> Iterator[Document]:
+        """Iterate over documents in the dataset, temporarily turning on memory caching."""
+        for document in self.documents:
+            with document:
+                yield document
 
     def __len__(self) -> int:
         return len(self.documents)
+
+    def total_page_count(self) -> int:
+        return sum(doc.page_count for doc in self.documents)
 
     def __str__(self) -> str:
         return f"Dataset({self.name})"

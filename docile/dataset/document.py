@@ -81,7 +81,7 @@ class Document:
         # Page count is always cached, even when otherwise caching is turned off.
         self._page_count: Optional[int] = None
 
-        self._open = False
+        self._open = 0
 
     @property
     def page_count(self) -> int:
@@ -141,9 +141,10 @@ class Document:
         return image_size
 
     def __enter__(self) -> "Document":
-        self._open = True
-        for ctx in (self.ocr, self.annotation, *self.images.values()):
-            ctx.__enter__()
+        self._open += 1
+        if self._open == 1:
+            for ctx in (self.ocr, self.annotation, *self.images.values()):
+                ctx.__enter__()
         return self
 
     def __exit__(
@@ -152,9 +153,10 @@ class Document:
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        self._open = False
-        for ctx in (self.ocr, self.annotation, *self.images.values()):
-            ctx.__exit__(exc_type, exc, traceback)
+        self._open -= 1
+        if self._open == 0:
+            for ctx in (self.ocr, self.annotation, *self.images.values()):
+                ctx.__exit__(exc_type, exc, traceback)
 
     def __str__(self) -> str:
         return f"Document({self.data_paths.name}:{self.docid})"
