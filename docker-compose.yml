@@ -5,8 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        GPU_RUNTIME: nvidia
     ports:
       - "${JUPYTER_PORT}:${JUPYTER_PORT}"
     command: poetry run jupyter lab --ip=0.0.0.0 --port=${JUPYTER_PORT} --allow-root
@@ -14,14 +12,32 @@ services:
       - "./:/app/:cached"
     deploy:
       resources:
-        # consider reducing these limits
+        # consider updating these limits
         limits:
-          cpus: "64"
-          memory: 100GB
+          cpus: "4"
+          memory: 8GB
+
+  jupyter-gpu:
+    image: jupyter/base-notebook
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+      args:
+        GPU_RUNTIME: nvidia
+    ports:
+      - "${JUPYTER_PORT_GPU}:${JUPYTER_PORT_GPU}"
+    command: poetry run jupyter lab --ip=0.0.0.0 --port=${JUPYTER_PORT_GPU} --allow-root
+    volumes:
+      - "./:/app/:cached"
+    deploy:
+      resources:
+        # consider updating these limits
+        limits:
+          cpus: "16"
+          memory: 32GB
         reservations:
           devices:
-            - capabilities: [gpu]
+          - driver: "nvidia"
+            capabilities: [gpu]
     environment:
       CUDA_DEVICE_ORDER: PCI_BUS_ID
-      CUDA_VISIBLE_DEVICES: ''
-    privileged: true
