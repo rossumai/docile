@@ -3,7 +3,6 @@ import json
 import logging
 from typing import Any, Callable, Dict, List, Optional
 
-import cv2
 import numpy as np
 from PIL import Image, ImageOps
 
@@ -99,13 +98,17 @@ class DocumentOCR(CachedObject[Dict]):
 
     @classmethod
     def get_model(cls) -> Callable:
-        from doctr.models import ocr_predictor
-
         if cls._model:
             return cls._model
 
+        import torch
+        from doctr.models import ocr_predictor
+
         logger.info("Initializing OCR predictor model.")
-        cls._model = ocr_predictor(pretrained=True)
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        logger.info("DocTR using device:", device)
+        cls._model = ocr_predictor(pretrained=True).to(device=device)
+
         return cls._model
 
     @staticmethod
@@ -155,6 +158,9 @@ def _snap_bbox_to_text(bbox: BBox, page_image: Image.Image) -> BBox:
     top/bottom/left/right that are empty or probably do not contain the required text (this is done
     by heuristics explained in detail in `_foreground_text_bbox` function).
     """
+    # Load dependencies inside so that they are not needed when the pre-computed OCR is used.
+    import cv2
+
     scaled_bbox = bbox.to_absolute_coords(page_image.width, page_image.height)
     bbox_image = page_image.crop(scaled_bbox.to_tuple())
     bbox_image = ImageOps.grayscale(bbox_image)

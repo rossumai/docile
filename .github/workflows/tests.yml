@@ -55,12 +55,9 @@ jobs:
           path: .venv
           key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
-      - name: Install Project Dependencies
-        run: poetry install --no-interaction --no-root
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-
       - name: Install Project
-        run: poetry install --no-interaction --with test
+        run: poetry install --no-interaction
+        if: steps.cache-deps.outputs.cache-hit != 'true'
 
       - name: Pytest
         run: poetry run pytest
