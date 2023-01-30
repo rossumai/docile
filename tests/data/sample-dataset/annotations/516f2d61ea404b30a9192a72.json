@@ -696,10 +696,13 @@
     "document_type": "tax_invoice",
     "language": "eng",
     "original_filename": "nkvc0055",
-    "page_aspect_ratios": [
-      0.7537993920972644
-    ],
     "page_count": 1,
+    "page_sizes_at_200dpi": [
+      [
+        1692,
+        2245
+      ]
+    ],
     "page_to_table_grid": {
       "0": {
         "bbox": [

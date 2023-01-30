@@ -2,6 +2,46 @@ from docile.dataset.bbox import BBox
 from docile.dataset.dataset import Dataset
 
 
+def test_document_fields_getters(sample_dataset: Dataset, sample_dataset_docid: str) -> None:
+    doc = sample_dataset[sample_dataset_docid]
+    assert len(doc.annotation.fields) == 11
+    assert {f.fieldtype for f in doc.annotation.fields} == {
+        "amount_due",
+        "amount_total_gross",
+        "customer_billing_address",
+        "customer_billing_name",
+        "customer_id",
+        "date_due",
+        "date_issue",
+        "document_id",
+        "payment_reference",
+        "payment_terms",
+        "vendor_name",
+    }
+    assert len(doc.annotation.page_fields(0)) == 11
+    assert doc.annotation.page_fields(1) == []
+
+    assert len(doc.annotation.li_fields) == 40
+    assert {f.line_item_id for f in doc.annotation.li_fields} == set(range(1, 9))
+    assert len(doc.annotation.page_li_fields(0)) == 40
+
+    assert len(doc.annotation.li_headers) == 7
+    assert {f.line_item_id for f in doc.annotation.li_headers} == {0}
+    assert len(doc.annotation.page_li_headers(0)) == 7
+
+
+def test_document_metadata_getters(sample_dataset: Dataset, sample_dataset_docid: str) -> None:
+    doc = sample_dataset[sample_dataset_docid]
+    assert doc.annotation.page_count == 1
+    assert doc.annotation.cluster_id == 554
+    assert doc.annotation.page_image_size_at_200dpi(0) == [1692, 2245]
+    assert doc.annotation.document_type == "tax_invoice"
+    assert doc.annotation.currency == "other"
+    assert doc.annotation.language == "eng"
+    assert doc.annotation.source == "ucsf"
+    assert doc.annotation.original_filename == "nkvc0055"
+
+
 def test_document_annotation_get_table_grid(
     sample_dataset: Dataset, sample_dataset_docid: str
 ) -> None:
