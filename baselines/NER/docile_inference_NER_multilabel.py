@@ -315,6 +315,34 @@ def merge_text_boxes(text_boxes):
     return final_fields
 
 
+def lir_by_table_transformer(line_item_bboxes, sorted_fields, page):
+    tmp_field_labels = []
+    for field in sorted_fields:
+        bbox = field.bbox.to_tuple()
+        # use table-transformer predictions for lir
+        li_id = None
+        max_overlap = 0
+        for lid, line_item_bbox in enumerate(line_item_bboxes):
+            overlap = BBox(*line_item_bbox).intersection(BBox(*bbox)).area / BBox(*bbox).area
+            if overlap > max_overlap:
+                li_id = lid
+                max_overlap = overlap
+
+        if li_id is not None:
+            tmp_field_labels.append(
+                Field(
+                    bbox=BBox(*bbox),
+                    text=field.text,
+                    score=field.score,
+                    page=page,
+                    groups=field.groups,
+                    line_item_id=li_id,
+                    fieldtype=field.fieldtype
+                )
+            )
+    return tmp_field_labels
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -324,7 +352,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--docile_path",
         type=Path,
-        default=Path("/storage/pif_documents/dataset_exports/docile221221-0/")
+        default=Path("/mnt/shared/ailabs/pif_documents/dataset_exports/docile221221-0/")
     )
     parser.add_argument(
         "--overlap_thr",
@@ -337,7 +365,28 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--output_dir",
+        # default=Path("/mnt/shared/ailabs/table_extraction/predictions/NER/from_table_crops/docile221221-0/XLM_RoBERTa_Large"),
+        default=Path("/mnt/shared/ailabs/table_extraction/predictions/NER/from_table_crops/docile221221-0/RoBERTa_base"),
         type=Path,
+    )
+    parser.add_argument(
+        "--table_transformer_predictions_dir",
+        default=Path("/mnt/shared/ailabs/docile/line_item_detection/table_transformer/predictions/"),
+        help="Directory with table-transformer predictions jsons (see --crop_bboxes_filename)",
+        type=Path,
+    )
+    parser.add_argument(
+        "--crop_bboxes_filename",
+        help="Json file in `table_transformer_predictions_dir` with "
+        "table crop bboxes e.g. predicted by table-transformer. If provided, NER "
+        "will be run only on texts within the crop.",
+        default=None,
+    )
+    parser.add_argument(
+        "--line_item_bboxes_filename",
+        help="Json file in `table_transformer_predictions_dir` with "
+        "line item bboxes e.g. predicted by table-transformer.",
+        default=None
     )
     parser.add_argument(
         "--store_intermediate_results",
@@ -371,6 +420,17 @@ if __name__ == "__main__":
 
     model.eval()
 
+    crop_bboxes = None
+    if args.crop_bboxes_filename is not None:
+        with open(os.path.join(args.table_transformer_predictions_dir, args.split, args.crop_bboxes_filename)) as fin:
+            crop_bboxes = json.load(fin)
+    line_item_bboxes = None
+    predict_li_by_NER = True
+    if args.line_item_bboxes_filename is not None:
+        with open(os.path.join(args.table_transformer_predictions_dir, args.split, args.line_item_bboxes_filename)) as fin:
+            line_item_bboxes = json.load(fin)
+        predict_li_by_NER = False
+
     for document in tqdm(dataset):
         doc_id = document.docid
         # page_to_table_grids = document.annotation.content["metadata"]["page_to_table_grids"]
@@ -395,6 +455,15 @@ if __name__ == "__main__":
                 ocr_field.bbox = ocr_field.bbox.to_absolute_coords(W, H)
 
             sorted_fields, clusters = get_sorted_field_candidates(ocr)
+
+            # Filter out fields based on the tables region
+            if crop_bboxes is not None:
+                if crop_bboxes[doc_id][str(page)] is not None:
+                    tbb = BBox(*crop_bboxes[doc_id][str(page)])
+                    sorted_fields = [
+                        field for field in sorted_fields
+                        if tbb.intersection(field.bbox).area / field.bbox.area >= args.overlap_thr
+                    ]
 
             text_tokens = [x.text for x in sorted_fields]
             bboxes = np.array([x.bbox.to_tuple() for x in sorted_fields])
@@ -680,6 +749,13 @@ if __name__ == "__main__":
                         )
                     )
 
+            if not predict_li_by_NER:
+                tmp_field_labels = lir_by_table_transformer(
+                    line_item_bboxes[doc_id][str(page)],
+                    tmp_field_labels,
+                    page
+                )
+
             #
             line_item_groups = {}
             for field in tmp_field_labels:
@@ -770,7 +846,17 @@ if __name__ == "__main__":
                     "groups": field.groups,
                 }
             )
-    out_path = args.output_dir / f"{args.split}_predictions_LIR.json"
+    if args.crop_bboxes_filename is not None:
+        crop_info = f"_cropped_{args.crop_bboxes_filename.split('.')[0]}"
+    else:
+        crop_info = ""
+    if args.line_item_bboxes_filename is not None:
+        lir_info = f"_lir_{args.line_item_bboxes_filename.split('.')[0]}"
+    else:
+        lir_info = ""
+
+    out_path = args.output_dir / f"{args.split}_predictions{crop_info}{lir_info}_LIR.json"
+
     with open(out_path, "w") as json_file:
         json.dump(predictions_to_store, json_file)
 
@@ -790,3 +876,4 @@ if __name__ == "__main__":
     evaluation_result_LIR.to_file(args.output_dir / f"{args.split}_results_LIR.json")
 
     print(f"{datetime.now()} Finished.")
+
