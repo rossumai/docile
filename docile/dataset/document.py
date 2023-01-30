@@ -1,8 +1,8 @@
 from pathlib import Path
 from types import TracebackType
-from typing import Optional, Type, Union
+from typing import Optional, Tuple, Type, Union
 
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from docile.dataset.cached_object import CachingConfig
 from docile.dataset.document_annotation import DocumentAnnotation
@@ -93,13 +93,24 @@ class Document:
         """
         Get image of the requested page.
 
+        The image size with default parameters is equal to `self.page_image_size(page)`. It is an
+        image rendered from the PDF at 200 DPI. To render images at lower DPI, you can use:
+        ```
+        image_size = document.page_image_size(page, dpi=72)
+        image = document.page_image(page, image_size)
+        ```
+
         Parameters
         ----------
         page
             Number of the page (from 0 to page_count - 1)
         image_size
-            Check https://pdf2image.readthedocs.io/en/latest/reference.html for documentation of
-            this parameter.
+            Size of the requested image as (width, height) tuple. If both dimensions are given,
+            aspect ratio is not preserved. If one dimension is None, aspect ratio is preserved with
+            the second dimension determining the image size. If both dimensions are None (default),
+            aspect ratio is preserved and the image is rendered at 200 DPI. The parameter can be
+            also a single integer in which case the result is a square image. Check
+            https://pdf2image.readthedocs.io/en/latest/reference.html for more details.
         """
         if image_size not in self.images:
             self.images[image_size] = DocumentImages(
@@ -113,6 +124,21 @@ class Document:
                 self.images[image_size].__enter__()
 
         return self.images[image_size].content[page]
+
+    def page_image_size(self, page: int, dpi: int = 200) -> Tuple[int, int]:
+        """
+        Get (width, height) of the page when rendered with `self.page_image(page)` at `dpi`.
+
+        In a very few cases in the unlabeled set, the rendering fails (due to the pdf pages being
+        too big) and the rendered image has size (1,1). You can skip these documents or convert the
+        pdfs to images in a different way.
+        """
+        width_200dpi, height_200dpi = self.annotation.page_image_size_at_200dpi(page)
+        image_size = (
+            max(1, round(dpi / 200 * width_200dpi)),
+            max(1, round(dpi / 200 * height_200dpi)),
+        )
+        return image_size
 
     def __enter__(self) -> "Document":
         self._open = True
@@ -129,27 +155,6 @@ class Document:
         self._open = False
         for ctx in (self.ocr, self.annotation, *self.images.values()):
             ctx.__exit__(exc_type, exc, traceback)
-
-    def page_image_with_fields(
-        self, page: int, image_size: OptionalImageSize = (None, None), show_ocr_words: bool = False
-    ) -> Image.Image:
-        """Return page image with bboxes representing fields."""
-
-        page_img = self.page_image(page, image_size)
-
-        draw_img = page_img.copy()
-        draw = ImageDraw.Draw(draw_img)
-
-        for fields, color in [
-            (self.annotation.fields, "green"),
-            (self.annotation.li_fields, "blue"),
-        ] + ([(self.ocr.get_all_words(page), "red")] if show_ocr_words else []):
-            for field in fields:
-                if field.page != page:
-                    continue
-                scaled_bbox = field.bbox.to_absolute_coords(draw_img.width, draw_img.height)
-                draw.rectangle(scaled_bbox.to_tuple(), outline=color)
-        return draw_img
 
     def __str__(self) -> str:
         return f"Document({self.data_paths.name}:{self.docid})"
