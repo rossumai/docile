@@ -76,9 +76,16 @@ class DocumentOCR(CachedObject[Dict]):
             (`with document:`) to turn on memory caching and then use
             `functools.partial(document.page_image, page)`.
         """
-        # Snapped bboxes are added to the dictionary, so copy the dict first if snapping is on.
+        # When both snapped and use_cached_snapping options are used but the OCR predictions do not
+        # yet contain the snapped geometry, the dictionary with OCR predictions is extended with
+        # the snapped geometry (in `_get_bbox_from_ocr_word`).
+        load_or_store_snapped_bboxes = snapped and use_cached_snapping
+
+        # Make a copy of the OCR dictionary in case it is extended with the snapped geometry below.
         ocr_dict_original = self.content
-        ocr_dict = copy.deepcopy(ocr_dict_original) if snapped else ocr_dict_original
+        ocr_dict = (
+            copy.deepcopy(ocr_dict_original) if load_or_store_snapped_bboxes else ocr_dict_original
+        )
 
         words = []
 
@@ -92,7 +99,7 @@ class DocumentOCR(CachedObject[Dict]):
                     words.append(Field(text=word["value"], bbox=bbox, page=page))
 
         # If cached snapping is used and the snapping was not pre-computed, store it in the file.
-        if snapped and use_cached_snapping and ocr_dict != ocr_dict_original:
+        if load_or_store_snapped_bboxes and ocr_dict != ocr_dict_original:
             self.overwrite(ocr_dict)
 
         return words
