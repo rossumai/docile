@@ -63,9 +63,6 @@ class Field:
 
         return (self.use_only_for_ap, -score)
 
-    def __str__(self) -> str:
-        return repr(self)
-
     def __repr__(self) -> str:
         dataclass_fields_str = ", ".join(
             f"{dataclass_field.name}={getattr(self, dataclass_field.name)!r}"
