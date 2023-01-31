@@ -10,6 +10,7 @@ def test_get_covered_pccs() -> None:
     bbox = BBox(0.25, 0.25, 0.75, 0.75)
     assert pcc_set.get_covered_pccs(bbox, 0) == {PCC(0.5, 0.5, 0)}
     assert pcc_set.get_covered_pccs(bbox, 1) == {PCC(0.5, 0.5, 1), PCC(0.4, 0.6, 1)}
+    assert pcc_set.get_covered_pccs(BBox(0.39, 0.59, 0.41, 0.61), 1) == {PCC(0.4, 0.6, 1)}
 
 
 def test_get_snapped_ocr_words(sample_dataset: Dataset, sample_dataset_docid: str) -> None:

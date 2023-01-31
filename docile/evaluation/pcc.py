@@ -45,7 +45,7 @@ class PCCSet:
         x_subset = set(sorted_x_pccs[i_l:i_r])
 
         sorted_y_pccs = self._page_to_sorted_y_pccs[page]
-        sorted_y_pccs_y_only = [pcc.y for pcc in sorted_x_pccs]
+        sorted_y_pccs_y_only = [pcc.y for pcc in sorted_y_pccs]
         i_t = bisect_left(sorted_y_pccs_y_only, bbox.top)
         i_b = bisect_right(sorted_y_pccs_y_only, bbox.bottom)
         y_subset = set(sorted_y_pccs[i_t:i_b])
