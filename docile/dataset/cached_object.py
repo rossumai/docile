@@ -41,6 +41,17 @@ class CachedObject(Generic[CT]):
         self.memory_cache = cache.memory_cache
         self.disk_cache = cache.disk_cache
 
+    def load(self) -> None:
+        self.memory_cache_permanent = True
+        self.memory_cache = True
+        if self._content is None:
+            self.content
+
+    def release(self) -> None:
+        self.memory_cache_permanent = False
+        self.memory_cache = False
+        self._content = None
+
     def __enter__(self) -> "CachedObject":
         self.memory_cache = True
         return self

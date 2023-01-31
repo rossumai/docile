@@ -65,15 +65,13 @@ class Document:
         )
         annotation_path = self.data_paths.annotation_path(docid)
         self.annotation = DocumentAnnotation(annotation_path, cache=cache_annotation)
-        if load_annotations:
-            self.annotation.content
 
         cache_ocr = CachingConfig.DISK_AND_MEMORY if load_ocr else CachingConfig.DISK
         ocr_path = self.data_paths.ocr_path(docid)
         pdf_path = self.data_paths.pdf_path(docid)
         self.ocr = DocumentOCR(ocr_path, pdf_path, cache=cache_ocr)
-        if load_ocr:
-            self.ocr.content
+
+        self.load(load_annotations, load_ocr)
 
         self.images = {}
         self.cache_images = cache_images
@@ -82,6 +80,22 @@ class Document:
         self._page_count: Optional[int] = None
 
         self._open = 0
+
+    def load(self, annotations: bool = True, ocr: bool = True) -> "Document":
+        """Load the annotations and/or OCR content to memory."""
+        if annotations:
+            self.annotation.load()
+        if ocr:
+            self.ocr.load()
+        return self
+
+    def release(self, annotations: bool = True, ocr: bool = True) -> "Document":
+        """Free up document resources from memory."""
+        if annotations:
+            self.annotation.release()
+        if ocr:
+            self.ocr.release()
+        return self
 
     @property
     def page_count(self) -> int:
