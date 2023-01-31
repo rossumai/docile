@@ -21,10 +21,10 @@ class Dataset:
         self,
         split_name: str,
         dataset_path: Union[Path, str, DataPaths],
-        docids: Optional[Sequence[str]] = None,
         load_annotations: bool = True,
         load_ocr: bool = True,
         cache_images: CachingConfig = CachingConfig.DISK,
+        docids: Optional[Sequence[str]] = None,
     ):
         """
         Load dataset from index file or from a custom list of document ids.
@@ -49,8 +49,6 @@ class Dataset:
         dataset_path
             Path to the root directory with the unzipped dataset or a path to the ZIP file with the
             dataset.
-        docids
-            Custom list of document ids that are part of the dataset split.
         load_annotations
             If true, annotations for all documents are loaded immediately to memory.
         load_ocr
@@ -59,6 +57,8 @@ class Dataset:
             Whether to cache images generated from pdfs to disk and/or to memory. Use
             CachingConfig.OFF if you do not have enough disk space to store all images (e.g., for
             the unlabeled dataset).
+        docids
+            Custom list of document ids that are part of the dataset split.
         """
         self.split_name = split_name
         self.data_paths = DataPaths(dataset_path)
@@ -75,27 +75,63 @@ class Dataset:
         docids = docids if docids is not None else docids_from_file
         assert docids is not None  # this is guaranteed thanks to the checks above
 
-        if load_ocr and len(docids) > 10000:
-            logger.warning(
-                f"Loading OCR for {len(docids)} documents will have a big memory footprint."
-            )
-
-        no_progress_bar = not load_annotations and not load_ocr and len(docids) <= 10000
         documents = [
             Document(
                 docid=docid,
                 dataset_path=self.data_paths,
-                load_annotations=load_annotations,
-                load_ocr=load_ocr,
+                load_annotations=False,
+                load_ocr=False,
                 cache_images=cache_images,
             )
             for docid in tqdm(
-                docids, desc=f"Loading documents for {self.name}", disable=no_progress_bar
+                docids,
+                desc=f"Initializing documents for {self.name}",
+                disable=len(docids) <= 10000,
             )
         ]
         self._set_documents(documents)
+        self.load(load_annotations, load_ocr)
 
-        self.cache_images = cache_images
+    def load(self, annotations: bool = True, ocr: bool = True) -> "Dataset":
+        """
+        Load document resources to memory.
+
+        It can be useful to delay loading of document resources, e.g., when working with just a
+        sample of a big dataset.
+        ```
+        dataset_sample = (
+            Dataset("unlabeled", DATASET_PATH, load_annotations=False, load_ocr=False)
+            .sample(10)
+            .load()
+        )
+        ```
+
+        Parameters
+        ----------
+        annotations
+            If true, load annotations for all documents to memory.
+        ocr
+            If true, load ocr for all documents to memory.
+
+        Returns
+        -------
+        Dataset (self) with loaded document resources.
+        """
+        if not annotations and not ocr:
+            return self
+        if ocr and len(self) > 10000:
+            logger.warning(
+                f"Loading OCR for {len(self)} documents will have a big memory footprint."
+            )
+        for doc in tqdm(self.documents, desc=f"Loading documents for {self.name}"):
+            doc.load(annotations, ocr)
+        return self
+
+    def release(self, annotations: bool = True, ocr: bool = True) -> "Dataset":
+        """Free up document resources from memory."""
+        for doc in self.documents:
+            doc.release(annotations, ocr)
+        return self
 
     @property
     def name(self) -> str:
@@ -105,32 +141,10 @@ class Dataset:
     def docids(self) -> List[str]:
         return [doc.docid for doc in self.documents]
 
-    def load_split(self, split_name: str, load_annotations_and_ocr: bool = True) -> "Dataset":
-        """
-        Load a different split for the current dataset, using the same config for image caching.
-
-        If you want to only load annotations and not OCR, use the main constructor instead.
-
-        Parameters
-        ----------
-        split_name
-            Name of the dataset split to load.
-        load_annotations_and_ocr
-            Preload annotations and OCR to memory.
-        """
-        return self.__class__(
-            split_name=split_name,
-            dataset_path=self.data_paths,
-            load_annotations=load_annotations_and_ocr,
-            load_ocr=load_annotations_and_ocr,
-            cache_images=self.cache_images,
-        )
-
     def get_cluster(self, cluster_id: int) -> "Dataset":
         return self.from_documents(
             split_name=f"{self.split_name}[cluster_id={cluster_id}]",
             documents=[doc for doc in self.documents if doc.annotation.cluster_id == cluster_id],
-            cache_images=self.cache_images,
         )
 
     @overload
@@ -163,7 +177,6 @@ class Dataset:
             return self.from_documents(
                 split_name=f"{self.split_name}[{str_slice}]",
                 documents=self.documents[id_or_pos_or_slice],
-                cache_images=self.cache_images,
             )
         if isinstance(id_or_pos_or_slice, str):
             return self.documents[self.docid_to_index[id_or_pos_or_slice]]
@@ -187,7 +200,7 @@ class Dataset:
         rng = Random(seed)
         sample_documents = rng.sample(self.documents, sample_size)
         split_name = f"{self.split_name}[sample({sample_size},seed={seed})]"
-        return self.from_documents(split_name, sample_documents, self.cache_images)
+        return self.from_documents(split_name, sample_documents)
 
     def __iter__(self) -> Iterator[Document]:
         """Iterate over documents in the dataset, temporarily turning on memory caching."""
@@ -215,7 +228,6 @@ class Dataset:
         cls,
         split_name: str,
         documents: Sequence[Document],
-        cache_images: CachingConfig = CachingConfig.DISK,
     ) -> "Dataset":
         """
         Create a dataset directly from documents, rather than from docids.
@@ -230,11 +242,10 @@ class Dataset:
         dataset = cls(
             split_name=split_name,
             dataset_path=data_paths,
-            docids=[doc.docid for doc in documents],
             # Do not load annotations and OCR since it might be already loaded once in `documents`.
             load_annotations=False,
             load_ocr=False,
-            cache_images=cache_images,
+            docids=[doc.docid for doc in documents],
         )
         dataset._set_documents(documents)
         return dataset

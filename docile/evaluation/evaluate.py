@@ -324,6 +324,16 @@ def _validate_predictions(
             raise PredictionsValidationError(f"{task.upper()}: Prediction is missing 'fieldtype'.")
 
     for task, docid_to_predictions in task_to_docid_to_predictions.items():
+        if any(
+            not pred.bbox.has_valid_relative_coords()
+            for predictions in docid_to_predictions.values()
+            for pred in predictions
+        ):
+            raise PredictionsValidationError(
+                f"{task.upper()}: Prediction bbox does not have valid relative coordinates."
+            )
+
+    for task, docid_to_predictions in task_to_docid_to_predictions.items():
         if task == "kile":
             if any(
                 pred.line_item_id is not None

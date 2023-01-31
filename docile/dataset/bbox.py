@@ -28,6 +28,9 @@ class BBox(Generic[T]):
             self.bottom / height,
         )
 
+    def has_valid_relative_coords(self) -> bool:
+        return 0 <= self.left <= self.right <= 1 and 0 <= self.top <= self.bottom <= 1
+
     def to_tuple(self) -> Tuple[T, T, T, T]:
         return self.left, self.top, self.right, self.bottom
 
