@@ -32,6 +32,9 @@ def compute_average_precision(
     -------
     Average precision metric
     """
+    if total_annotations == 0:
+        return 0.0
+
     recall_precision_pairs = [[0.0, 1.0]]  # the precision here is not used
     true_positives = 0
     observed_predictions = 0
