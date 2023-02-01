@@ -5,12 +5,12 @@ import operator
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Mapping, Sequence, Tuple, Union
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from tabulate import tabulate
 from tqdm import tqdm
 
-from docile.dataset import KILE_FIELDTYPES, LIR_FIELDTYPES, Dataset, Field
+from docile.dataset import KILE_FIELDTYPES, LIR_FIELDTYPES, Dataset, Document, Field
 from docile.evaluation.average_precision import compute_average_precision
 from docile.evaluation.line_item_matching import get_lir_matches
 from docile.evaluation.pcc import get_document_pccs
@@ -78,7 +78,11 @@ class EvaluationResult:
         return self.get_metrics(task)[metric]
 
     def get_metrics(
-        self, task: str, same_text: bool = False, fieldtype: str = "", docid: str = ""
+        self,
+        task: str,
+        same_text: bool = False,
+        fieldtype: str = "",
+        docids: Optional[Sequence[str]] = None,
     ) -> Dict[str, float]:
         """Get metrics based on several filters.
 
@@ -94,16 +98,20 @@ class EvaluationResult:
             location with wrong text that was matched to the annotation first.
         fieldtype
             If non-empty, restrict the predictions and annotations to this fieldtype.
-        docid
-            If non-empty, evaluate only on the single document.
+        docids
+            Only restrict to these docids (all have to be in the original dataset).
 
         Returns
         -------
         Dictionary from metric name to the metric value.
         """
         docid_to_matching = self.task_to_docid_to_matching[task]
-        if docid != "":
-            docid_to_matching = {docid: docid_to_matching[docid]}
+        if docids is not None:
+            if not set(docid_to_matching.keys()).issuperset(docids):
+                raise ValueError(
+                    "Cannot evaluate on subset with documents missing in the evaluation"
+                )
+            docid_to_matching = {docid: docid_to_matching[docid] for docid in docids}
         docid_to_filtered_matching = {
             docid: matching.filter(same_text=same_text, fieldtype=fieldtype)
             for docid, matching in docid_to_matching.items()
@@ -112,9 +120,10 @@ class EvaluationResult:
 
     def print_report(
         self,
-        docid: str = "",
+        subsets: Sequence[Union[Dataset, Document]] = (),
         include_fieldtypes: bool = True,
         include_same_text: bool = False,
+        show_legend: bool = True,
         tablefmt: str = "github",
         floatfmt: str = ".3f",
     ) -> str:
@@ -123,8 +132,8 @@ class EvaluationResult:
 
         Parameters
         ----------
-        docid
-            Only restrict to this single document.
+        subsets
+            Print evaluation report for several subsets of the original evaluation dataset.
         include_fieldtypes
             Also show metrics for each fieldtype separately.
         include_same_text
@@ -140,10 +149,22 @@ class EvaluationResult:
         -------
         Multi-line string with the human-readable report.
         """
-        if docid == "":
-            report = [f"Evaluation report for {self.dataset_name}"]
-        else:
-            report = [f"Evaluation report for {docid!r} from {self.dataset_name}"]
+
+        def get_subset_docids(subset: Union[Document, Dataset]) -> Sequence[str]:
+            return [subset.docid] if isinstance(subset, Document) else subset.docids
+
+        # When there are two or more subsets, a table with subset summary is shown, followed by
+        # reports of the individual subsets (if include_fieldtypes is used). Otherwise show only
+        # report for the whole dataset or the single subset.
+        report_name = (
+            self.dataset_name
+            if len(subsets) == 0
+            else str(subsets[0])
+            if len(subsets) == 1
+            else f"{self.dataset_name} subsets"
+        )
+        report_docids = get_subset_docids(subsets[0]) if len(subsets) == 1 else None
+        report = [f"Evaluation report for {report_name}"]
 
         iou_threshold_str = ""
         if self.iou_threshold < 1:
@@ -159,28 +180,85 @@ class EvaluationResult:
                     task_name += " (with text comparison)"
                 report.append(task_name)
                 report.append("-" * len(report[-1]))
-                summary_metrics = self.get_metrics(task=task, same_text=same_text, docid=docid)
+                summary_metrics = self.get_metrics(
+                    task=task, same_text=same_text, docids=report_docids
+                )
                 primary_metric_name = TASK_TO_PRIMARY_METRIC_NAME[task]
                 primary_metric = summary_metrics[primary_metric_name]
                 report.append(f"Primary metric ({primary_metric_name}): {primary_metric}")
                 report.append("")
 
                 assert set(summary_metrics.keys()) == set(METRIC_NAMES)
-                headers = ["fieldtype"] + METRIC_NAMES
-                rows = [["**-> micro average**"] + [summary_metrics[m] for m in METRIC_NAMES]]
-
-                if include_fieldtypes:
-                    fieldtypes = KILE_FIELDTYPES if task == "kile" else LIR_FIELDTYPES
-                    for fieldtype in fieldtypes:
-                        metrics = self.get_metrics(
-                            task=task, same_text=same_text, fieldtype=fieldtype, docid=docid
+                if len(subsets) > 1:
+                    headers = ["subsets"] + METRIC_NAMES
+                    rows = [[self.dataset_name] + [summary_metrics[m] for m in METRIC_NAMES]]
+                    for subset in subsets:
+                        subset_metrics = self.get_metrics(
+                            task=task, same_text=same_text, docids=get_subset_docids(subset)
                         )
-                        rows.append([fieldtype] + [metrics[m] for m in METRIC_NAMES])
+                        rows.append([str(subset)] + [subset_metrics[m] for m in METRIC_NAMES])
+                else:
+                    headers = ["fieldtype"] + METRIC_NAMES
+                    rows = [["**-> micro average**"] + [summary_metrics[m] for m in METRIC_NAMES]]
+                    if include_fieldtypes:
+                        fieldtypes = KILE_FIELDTYPES if task == "kile" else LIR_FIELDTYPES
+                        for fieldtype in fieldtypes:
+                            metrics = self.get_metrics(
+                                task=task,
+                                same_text=same_text,
+                                fieldtype=fieldtype,
+                                docids=report_docids,
+                            )
+                            rows.append([fieldtype] + [metrics[m] for m in METRIC_NAMES])
 
                 table = tabulate(rows, headers, tablefmt=tablefmt, floatfmt=floatfmt)
                 report.extend(table.splitlines())
                 report.append("")
-        return "\n".join(report)
+
+        report_str = "\n".join(report)
+        if len(subsets) > 1 and include_fieldtypes:
+            # Iterate over individual subsets, including the no subset option as first.
+            for one_subset in [[]] + [[subset] for subset in subsets]:
+                report_str += "\n"
+                report_str += self.print_report(
+                    subsets=one_subset,
+                    include_fieldtypes=include_fieldtypes,
+                    include_same_text=include_same_text,
+                    show_legend=False,
+                    tablefmt=tablefmt,
+                    floatfmt=floatfmt,
+                )
+
+        if show_legend:
+            report_str += "\n" + self.print_legend(len(subsets) > 1, include_same_text)
+
+        return report_str
+
+    @staticmethod
+    def print_legend(show_subsets_summary: bool, include_same_text: bool) -> str:
+        legend = ["Notes:"]
+        if show_subsets_summary:
+            legend.append(
+                "* '{dataset}-x-shot' means that the evaluation is restricted to documents from "
+                "layout clusters with `x` documents for training available. Here 'training' means "
+                "trainval for test and train for val."
+            )
+            legend.append(
+                "* '{dataset}-synth-clusters-only' means that the evaluation is restricted to "
+                "documents from layout clusters for which synthetic data exists."
+            )
+        legend.append(
+            "* For AP all predictions are used. For f1, precision, recall, TP, FP and FN "
+            "predictions explicitly marked with flag `use_only_for_ap=True` are excluded."
+        )
+        if include_same_text:
+            legend.append(
+                "* '{TASK} (with text comparison)' means that matches found based on location are "
+                "considered as a false positive and false negative pair when their `text` is not "
+                "completely equal."
+            )
+        legend.append("")
+        return "\n".join(legend)
 
 
 def evaluate_dataset(

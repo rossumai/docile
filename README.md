@@ -90,6 +90,9 @@ docile_evaluate \
   --dataset-path path/to/dataset[.zip] \
   --split val \
   --predictions path/to/predictions.json \
+  --evaluate-x-shot-subsets "0,1-3,4+" \  # default, show evaluation for 0-shot, few-shot and many-shot layout clusters
+  --evaluate-synthetic-subsets \  # optional, show evaluation on layout clusters with available synthetic data
+  --evaluate-fieldtypes \  # optional, show breakdown per fieldtype
   --evaluate-also-text \  # optional
   --store-evaluation-result LIR_val_eval.json  # optional, it can be loaded in the dataset browser
 ```

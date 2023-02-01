@@ -90,7 +90,7 @@ def test_evaluation_result_get_metrics(mock_evaluation_result: EvaluationResult)
         "f1": pytest.approx(2 / 5),
         "AP": 1 / 3,
     }
-    assert mock_evaluation_result.get_metrics("lir", fieldtype="f05", docid="b") == {
+    assert mock_evaluation_result.get_metrics("lir", fieldtype="f05", docids=["b"]) == {
         "TP": 1,
         "FP": 2,
         "FN": 0,
@@ -122,6 +122,9 @@ Primary metric (f1): 0.5
 | fieldtype            |   AP |   f1 |   precision |   recall |   TP |   FP |   FN |
 |----------------------|------|------|-------------|----------|------|------|------|
 | **-> micro average** | 0.47 | 0.50 |        0.50 |     0.50 |    2 |    2 |    2 |
+
+Notes:
+* For AP all predictions are used. For f1, precision, recall, TP, FP and FN predictions explicitly marked with flag `use_only_for_ap=True` are excluded.
 """
     )
 
