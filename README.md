@@ -37,7 +37,7 @@ You can also work with the zipped datasets when you turn off image caching (chec
 ## Installation
 
 ### Option 1: Install as a library
-To install just the library, download the wheel from the latest release on github and run:
+To install just the library, download the wheel from the [latest release on github](https://github.com/rossumai/docile/releases) and run:
 ```shell
 pip install docile-0.1.0-py3-none-any.whl
 ```
@@ -77,7 +77,7 @@ docker compose up -d jupyter[-gpu]
 
 Jupyter lab can be then accessed at `https://127.0.0.1:${JUPYTER_PORT}` (retrieve the token from logs with `docker compose logs jupyter[-gpu]`). You can also login to the container with:
 ```shell
-docker-compose exec jupyter bash
+docker compose exec jupyter bash
 ```
 After that run `poetry shell` to activate the virtual environment with the `docile` library and its dependencies installed.
 
