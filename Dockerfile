@@ -12,7 +12,7 @@ WORKDIR /app
 COPY poetry.lock pyproject.toml /app/
 
 COPY docile /app/docile
-COPY LICENSE /app/README.md
+COPY LICENSE /app/LICENSE
 COPY README.md /app/README.md
 
 RUN poetry install --no-interaction --extras interactive
