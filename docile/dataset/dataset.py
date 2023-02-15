@@ -245,6 +245,7 @@ class Dataset:
             # Do not load annotations and OCR since it might be already loaded once in `documents`.
             load_annotations=False,
             load_ocr=False,
+            cache_images=CachingConfig.OFF,
             docids=[doc.docid for doc in documents],
         )
         dataset._set_documents(documents)
