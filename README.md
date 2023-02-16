@@ -142,3 +142,15 @@ For development, install [poetry](https://python-poetry.org/docs/) and run `poet
 Install pre-commit with `pre-commit install` (don't forget you need to prepend all commands with `poetry run ...` if you did not run `poetry shell` first).
 
 Run tests by calling `pytest tests`.
+
+## Dataset and Benchmark Paper
+The dataset, the benchmark tasks and the evaluation criteria are described in detail in the [dataset paper](https://arxiv.org/abs/2302.05658). To cite the dataset, please use the following BibTeX entry:
+```
+@misc{simsa2023docile,
+    title={{DocILE} Benchmark for Document Information Localization and Extraction},
+    author={{\v{S}}imsa, {\v{S}}t{\v{e}}p{\'a}n and {\v{S}}ulc, Milan and U{\v{r}}i{\v{c}}{\'a}{\v{r}}, Michal and Patel, Yash and Hamdi, Ahmed and Koci{\'a}n, Mat{\v{e}}j and Skalick{\`y}, Maty{\'a}{\v{s}} and Matas, Ji{\v{r}}{\'\i} and Doucet, Antoine and Coustaty, Micka{\"e}l and Karatzas, Dimosthenis},
+    url = {https://arxiv.org/abs/2302.05658},
+    journal={arXiv preprint arXiv:2302.05658},
+    year={2023}
+}
+```
