@@ -16,6 +16,7 @@ Table of Contents:
 * [Predictions format and running evaluation](#predictions-format-and-running-evaluation)
 * [Pre-computed OCR](#pre-computed-ocr)
 * [Development instructions](#development-instructions)
+* [Dataset and benchmark paper](#dataset-and-benchmark-paper)
 
 Also check [Tutorials](tutorials/) to get quickly started with the repo.
 
@@ -143,7 +144,7 @@ Install pre-commit with `pre-commit install` (don't forget you need to prepend a
 
 Run tests by calling `pytest tests`.
 
-## Dataset and Benchmark Paper
+## Dataset and benchmark paper
 The dataset, the benchmark tasks and the evaluation criteria are described in detail in the [dataset paper](https://arxiv.org/abs/2302.05658). To cite the dataset, please use the following BibTeX entry:
 ```
 @misc{simsa2023docile,
