@@ -38,9 +38,9 @@ You can also work with the zipped datasets when you turn off image caching (chec
 ## Installation
 
 ### Option 1: Install as a library
-To install just the library, download the wheel from the [latest release on github](https://github.com/rossumai/docile/releases) and run:
+Install the library with:
 ```shell
-pip install docile-0.1.0-py3-none-any.whl
+pip install docile-benchmark
 ```
 
 To convert pdfs into images, the library uses https://github.com/Belval/pdf2image. On linux you might need to install:
@@ -55,8 +55,8 @@ brew install poppler
 
 Now you have all dependencies to work with the dataset annotations, pdfs, pre-comptued OCR and to run the evaluation. You can install extra dependencies by running the following (although using one of the provided dockerfiles, as explained below, might be easier in this case):
 ```shell
-pip install "docile-0.1.0-py3-none-any.whl[interactive]"
-pip install "docile-0.1.0-py3-none-any.whl[ocr]"
+pip install "docile-benchmark[interactive]"
+pip install "docile-benchmark[ocr]"
 ```
 
 The first line installs additional dependencies allowing you to use the interactive dataset browser in [docile/tools/dataset_browser.py](docile/tools/dataset_browser.py) and the [tutorials](tutorials/). The second line let's you rerun the OCR predictions from scratch (e.g., if you'd like to run it with different parameters) but to make it work, you might need additional dependencies on your system. Check https://github.com/mindee/doctr for the installation instructions (for pytorch).
