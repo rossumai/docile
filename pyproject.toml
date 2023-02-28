@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "docile"
-version = "0.2.1"
+name = "docile-benchmark"
+version = "0.2.2"
 description = "Tools to work with the DocILE dataset and benchmark"
 authors = [
     "Stepan Simsa <stepan.simsa@rossum.ai>",
