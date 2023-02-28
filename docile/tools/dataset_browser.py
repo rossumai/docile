@@ -1,7 +1,7 @@
 import enum
 import warnings
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Mapping, Optional, Tuple
 
 import ipywidgets as widgets
 import plotly.graph_objects as go
@@ -88,10 +88,10 @@ class DatasetBrowser:
         dataset: Dataset,
         doc_i: int = 0,
         page_i: int = 0,
-        kile_matching: dict = None,
-        lir_matching: dict = None,
-        kile_predictions: dict = None,
-        lir_predictions: dict = None,
+        kile_matching: Optional[Mapping] = None,
+        lir_matching: Optional[Mapping] = None,
+        kile_predictions: Optional[Mapping] = None,
+        lir_predictions: Optional[Mapping] = None,
         display_grid: bool = False,
     ) -> None:
         """
@@ -120,11 +120,13 @@ class DatasetBrowser:
         """
         if kile_matching is not None and kile_predictions is not None:
             warnings.warn(
-                "Displaying predictions from provided kile_matching, kile_predictions are ignored."
+                "Displaying predictions from provided kile_matching, kile_predictions are ignored.",
+                stacklevel=1,
             )
         if lir_matching is not None and lir_predictions is not None:
             warnings.warn(
-                "Displaying predictions from provided lir_matching, lir_predictions are ignored."
+                "Displaying predictions from provided lir_matching, lir_predictions are ignored.",
+                stacklevel=1,
             )
 
         self.dataset = dataset

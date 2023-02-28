@@ -41,7 +41,7 @@ class Field:
         expected_keys = {f.name for f in dataclasses.fields(cls)}
         for k in list(dct_copy.keys()):
             if k not in expected_keys:
-                warnings.warn(f"Ignoring unexpected key {k}")
+                warnings.warn(f"Ignoring unexpected key {k}", stacklevel=1)
                 dct_copy.pop(k)
 
         return cls(bbox=bbox, **dct_copy)
