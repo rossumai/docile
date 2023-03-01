@@ -14,6 +14,7 @@ Table of Contents:
 * [Download the dataset](#download-the-dataset)
 * [Installation](#installation)
 * [Predictions format and running evaluation](#predictions-format-and-running-evaluation)
+* [Tasks and evaluation metrics](#tasks-and-evaluation-metrics)
 * [Pre-computed OCR](#pre-computed-ocr)
 * [Development instructions](#development-instructions)
 * [Dataset and benchmark paper](#dataset-and-benchmark-paper)
@@ -84,7 +85,7 @@ After that run `poetry shell` to activate the virtual environment with the `doci
 
 ## Predictions format and running evaluation
 
-To evaluate predictions for tasks KILE or LIR, use the following command:
+To evaluate predictions for tasks KILE or LIR on the test set, you have to make a submission to the benchmark on the [Robust Reading Competition](https://rrc.cvc.uab.es/?ch=26) website. To evaluate on the validation set, use the following command:
 ```bash
 docile_evaluate \
   --task LIR \
@@ -94,11 +95,11 @@ docile_evaluate \
   --evaluate-x-shot-subsets "0,1-3,4+" \  # default, show evaluation for 0-shot, few-shot and many-shot layout clusters
   --evaluate-synthetic-subsets \  # optional, show evaluation on layout clusters with available synthetic data
   --evaluate-fieldtypes \  # optional, show breakdown per fieldtype
-  --evaluate-also-text \  # optional
+  --evaluate-also-text \  # optional, evaluate if the text prediction is correct
   --store-evaluation-result LIR_val_eval.json  # optional, it can be loaded in the dataset browser
 ```
 
-Run `docile_evaluate --help` for more information on the options. You can also run `docile_print_evaluation_report --evaluation-result-path LIR_val_eval.json` to print the results of a previously computed evaluation.
+Run `docile_evaluate --help` for more information on the options. You can also run `docile_print_evaluation_report --evaluation-result-path LIR_val_eval.json` to print the results of a previously computed evaluation. It is also possible to run evaluation or load the evaluation result directly from code which provides even more options, such as computing metrics just for a single document, specific subset of documents (i.e., documents belonging to the same layout cluster) etc. Check [docile/evaluation/evaluate.py](docile/evaluation/evaluate.py) module for more details.
 
 Predictions need to be stored in a single json file (for each task separately) containing a mapping from `docid` to the predictions for that document, i.e.:
 ```json
@@ -128,13 +129,31 @@ Explanation of the individual fields of the predictions:
   * `text` [optional]: text of the prediction, evaluated in a secondary metric only (when `--evaluate-also-text` is used)
   * `use_only_for_ap` [optional, default is False]: only use the prediction for AP metric computation, not for f1, precision and recall (useful for less confident predictions).
 
-You can use `docile.dataset.store_predictions` to store predictions represented with the `docile.dataset.Field` class to a json file with the required format.
+You can use [Field class](docile/dataset/field.py) to work with the predictions in code, in which case you can store them in a json file in the required format by using the `docile.dataset.store_predictions` function. You can also use the [BBox class](docile/dataset/bbox.py) to easily convert between relative and absolute coordinates (relative coordinates are used everywhere by default).
+
+## Tasks and evaluation metrics
+
+The DocILE benchmark comes with two tracks, Key Information Localization and Extraction (KILE) and Line Item Recognition (LIR), as described in the [dataset and benchmark paper](#dataset-and-benchmark-paper). In both tracks, the goal is to localize key information of pre-defined categories, i.e., for each document, detect fields with their `fieldtype`, location (`page` and `bbox`) and optionally `text`. For LIR, fields have to be additionally grouped into line items. A Line Item (LI) is a tuple of fields (e.g., description, quantity, and price) describing a single object instance to be extracted, e.g., a row in a table.
+
+Evaluated metrics are Average Precision (AP), F1, precision and recall, computed over all fields across all documents and field types (micro-average). A predicted and a ground truth field can be matched if they have the same `fieldtype` and if they are in the same location, which is decided by the overlap of their bounding boxes with the [provided OCR words](#pre-computed-ocr), described more precisely in the [dataset and benchmark paper](#dataset-and-benchmark-paper):
+
+<img width="500" alt="Definition of Pseudo-Character-Centers and correct localization." src="https://user-images.githubusercontent.com/1220288/222190727-e851a1d9-9c91-438e-bb8d-7ca2066620a4.png">
+
+For LIR, the fields have to additionally belong to corresponding Line Items. The mapping between `line_item_id` for predicted and ground truth fields is decided by taking the maximum matching which maximizes the total number of matched fields, when considering only fields with `use_only_for_ap=False` (because `use_only_for_ap=True` can be used to include also less confident predictions for AP computation which could negatively affect this matching).
+
+For both KILE and LIR, the metrics are then computed like this:
+
+* For each document page, find matching between predicted and ground truth fields. If more predicted fields match the same ground truth field, the one with higher `score` is used (but primarily the one with `use_only_for_ap=False`).
+* Order all predictions by descending `score` (but again, predictions with `use_only_for_ap=True` come last). Break ties by the original order in which predictions were provided. See [evaluate.py](docile/evaluation/evaluate.py) for the precise ordering rules. Notice that the order does not influence F1, precision and recall but it influences AP.
+* Compute F1, precision and recall by counting number of true positives and false positives/negatives and AP by iteratively adding predictions and updating precision and recall. We use the COCO style of AP where "gaps are filled", i.e., the precision-recall curve becomes non-increasing.
 
 ## Pre-computed OCR
 
-Pre-computed OCR is provided with the dataset. The prediction was done using the [DocTR](https://github.com/mindee/doctr) library. On top of that, word boxes were snapped to text (check the code in [docile/dataset/document_ocr.py](docile/dataset/document_ocr.py)). These snapped word boxes are used in evaluation (description of the evaluation is coming soon).
+Pre-computed OCR is provided with the dataset. The prediction was done using the [DocTR](https://github.com/mindee/doctr) library. On top of that, word boxes were snapped to text (check the code in [docile/dataset/document_ocr.py](docile/dataset/document_ocr.py)). These snapped word boxes are used in evaluation.
 
-While this should not be needed, it is possible to (re)generate OCR from scratch (including the snapping) with the provided `Dockerfile.gpu`. Just delete `DATASET_PATH/ocr` directory and then access the ocr for each document and page with `doc.ocr.get_all_words(page, snapped=True)`.
+To get the OCR words for a single page, call `document.ocr.get_all_words(page)`, optionally passing `snapped=True` to get the snapped bounding boxes. In some rare cases, the list of words might be empty (when the page is blank). Also notice the predicted words are grouped into blocks. For some models it might be beneficial to re-order the words primarily by lines.
+
+While it should not be needed, it is possible to (re)generate OCR from scratch (including the snapping) with the provided `Dockerfile.gpu`. Just delete `DATASET_PATH/ocr` directory and then access the ocr for each document and page with `document.ocr.get_all_words(page, snapped=True)`.
 
 ## Development instructions
 
