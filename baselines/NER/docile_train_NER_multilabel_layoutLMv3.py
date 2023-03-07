@@ -123,12 +123,12 @@ class NERDataMaker:
             have_unique_entities = True
             self.unique_entities = unique_entities
         self.processed_tables = []
-        self.metadata = metadata
+
+        assert len(data) == len(metadata)
 
         temp_processed_tables = []
-        # for table_data in data:
-        for i, page_data in enumerate(data):
-            # for i, (page_data, page_metadata) in enumerate(zip(data, metadata)):
+        self.metadata = []
+        for page_data, page_metadata in zip(data, metadata):
             tokens_with_entities = tag_fields_with_entities(page_data, self.unique_entities)
             if tokens_with_entities:
                 if not have_unique_entities:
@@ -136,9 +136,7 @@ class NERDataMaker:
                         if ent not in self.unique_entities:
                             self.unique_entities.append(ent)
                 temp_processed_tables.append(tokens_with_entities)
-            else:
-                # entity was empty => remove also from metadata
-                self.metadata.pop(i)
+                self.metadata.append(page_metadata)
 
         if not have_unique_entities:
             self.unique_entities.sort(key=lambda ent: ent if ent != "O" else "")
