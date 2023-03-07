@@ -126,6 +126,16 @@ def get_sorted_field_candidates(ocr_fields):
     return fields, clusters
 
 
+def _join_texts(text1: str, text2: str, separator: str) -> str:
+    return (
+        f"{text1}{separator}{text2}"
+        if text1 != "" and text2 != ""
+        else text1
+        if text1 != ""
+        else text2
+    )
+
+
 def merge_text_boxes(text_boxes, merge_strategy="new"):
     # group by fieldtype:
     groups = {}
@@ -195,30 +205,29 @@ def merge_text_boxes(text_boxes, merge_strategy="new"):
             # horizontal merging
             after_horizontal_merging = []
             for fields in textline_group.values():
-                not_processed = [fields[0]]
-                processed = [fields[0]]
+                fields = sorted(fields, key=lambda f: f.bbox.left)
+                processed = []
 
-                while len(not_processed):
-                    new_field = FieldWithGroups.from_dict(not_processed.pop(0).to_dict())
+                # Iterate over the fields and try if they can be merged with any of the following fields.
+                for field_to_process in fields:
+                    if field_to_process in processed:
+                        continue
+                    processed.append(field_to_process)
+                    new_field = FieldWithGroups.from_dict(field_to_process.to_dict())
                     glued_count = 1
                     for field in fields:
-                        if field not in processed and field != new_field:
-                            # if (field.bbox.left - new_field.bbox.right) <= (field.bbox.width/len(field.text))*1.5:
-                            if (
-                                field.bbox.left - new_field.bbox.right
-                            ) <= field.bbox.height * 1.25:
-                                new_field = dataclasses.replace(
-                                    new_field,
-                                    bbox=new_field.bbox.union(field.bbox),
-                                    score=new_field.score + field.score,
-                                    text=f"{new_field.text} {field.text}",
-                                )
-                                processed.append(field)
-                                glued_count += 1
-                            else:
-                                not_processed.append(field)
-                    processed.append(new_field)
-
+                        if field in processed:
+                            continue
+                        # if (field.bbox.left - new_field.bbox.right) <= (field.bbox.width/len(field.text))*1.5:
+                        if field.bbox.left - new_field.bbox.right <= field.bbox.height * 1.25:
+                            new_field = dataclasses.replace(
+                                new_field,
+                                bbox=new_field.bbox.union(field.bbox),
+                                score=new_field.score + field.score,
+                                text=_join_texts(new_field.text, field.text, " "),
+                            )
+                            processed.append(field)
+                            glued_count += 1
                     after_horizontal_merging.append((new_field, glued_count))
 
             # vertical merging
@@ -228,11 +237,14 @@ def merge_text_boxes(text_boxes, merge_strategy="new"):
                 for j, (field2, _gc2) in enumerate(after_horizontal_merging):
                     # ignore the same field (diagonal in the adjacency matrix)
                     if field1 != field2:
-                        y_dist = abs(field2.bbox.top - field1.bbox.bottom)
-                        if field1.bbox.left < field2.bbox.left:  # field1, ..., field2
-                            x_dist = field2.bbox.left - field1.bbox.right
-                        else:  # field2, ..., field1
-                            x_dist = field1.bbox.left - field2.bbox.right
+                        y_dist = max(
+                            field2.bbox.top - field1.bbox.bottom,
+                            field1.bbox.top - field2.bbox.bottom,
+                        )
+                        x_dist = max(
+                            field2.bbox.left - field1.bbox.right,
+                            field1.bbox.left - field2.bbox.right,
+                        )
                         # if (y_dist < field1.bbox.height*1.2):
                         if (y_dist < field1.bbox.height * 1.2) and (
                             x_dist <= field1.bbox.height * 1.25
@@ -250,6 +262,7 @@ def merge_text_boxes(text_boxes, merge_strategy="new"):
             #
             # Merge found components
             for idxs in components.values():
+                idxs = sorted(idxs, key=lambda i: after_horizontal_merging[i][0].bbox.top)
                 tmp_field = after_horizontal_merging[idxs[0]][0]
                 new_field = FieldWithGroups(
                     fieldtype=tmp_field.fieldtype,
@@ -266,11 +279,7 @@ def merge_text_boxes(text_boxes, merge_strategy="new"):
                         new_field,
                         bbox=new_field.bbox.union(field.bbox),
                         score=new_field.score + field.score,
-                        text=(
-                            f"{new_field.text}\n{field.text}"
-                            if new_field.text
-                            else f"{field.text}"
-                        ),
+                        text=_join_texts(new_field.text, field.text, "\n"),
                     )
                     glued_count += gc
                 new_field = dataclasses.replace(new_field, score=new_field.score / glued_count)
