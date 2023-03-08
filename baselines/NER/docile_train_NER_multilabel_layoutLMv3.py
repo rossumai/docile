@@ -4,6 +4,7 @@ import dataclasses
 import io
 import json
 import os
+from bisect import bisect_left, bisect_right
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -451,10 +452,37 @@ def get_data_from_docile(split, docile_path, overlap_thr=0.5):
             tables_bbox = table_grid.bbox.to_absolute_coords(W, H) if table_grid else None
 
             # 1. Tag ocr fields with fieldtypes from kile_fields + li_fields
+            # We sort the kile+lir fields by top coordinate and then for each ocr field we performr
+            # binary search to find only the kile+lir fields overlapping vertically.
+            # Note: original index is kept to preserve original behaviour.
+            kile_li_fields_page = kile_fields_page + li_fields_page
+            kile_li_fields_page_sorted = sorted(
+                enumerate(kile_li_fields_page),
+                key=lambda i_f: i_f[1].bbox.top,
+            )
+            fields_top_coords = [field.bbox.top for _, field in kile_li_fields_page_sorted]
+            # Max bottom coordinate is needed to have a sorted array for binary search. This means
+            # some extra fields will be included in the found range, causing a very minor slowdown.
+            fields_bottom_coords_max = [
+                field.bbox.bottom for _, field in kile_li_fields_page_sorted
+            ]
+            for i in range(1, len(kile_li_fields_page_sorted)):
+                fields_bottom_coords_max[i] = max(
+                    fields_bottom_coords_max[i],
+                    fields_bottom_coords_max[i - 1],
+                )
+            # Indexes to original kile_li_fields_page array
+            fields_idxs = [idx for idx, _ in kile_li_fields_page_sorted]
+
             updated_ocr = []
             for ocr_field in ocr:
                 new_ocr_field = dataclasses.replace(ocr_field, groups="")
-                for field in kile_fields_page + li_fields_page:
+                # take only fields with bottom coord after ocr_field.bbox.top
+                i_l = bisect_right(fields_bottom_coords_max, ocr_field.bbox.top)
+                # take only fields with top coord before ocr_field.bbox.bottom
+                i_r = bisect_left(fields_top_coords, ocr_field.bbox.bottom)
+                for idx in sorted(fields_idxs[i_l:i_r]):
+                    field = kile_li_fields_page[idx]
                     if ocr_field.bbox and field.bbox:
                         if (
                             field.bbox.intersection(ocr_field.bbox).area / ocr_field.bbox.area
@@ -1034,10 +1062,11 @@ if __name__ == "__main__":
     metrics = trainer.evaluate()
     trainer.log_metrics("eval", metrics)
 
-    # compute stats on train_sataset
-    trainer.eval_dataset = train_dataset
-    metrics = trainer.evaluate()
-    trainer.log_metrics("train-eval", metrics)
+    # compute stats on train_dataset (skip for synthetic dataset, otherwise it can result in memory issues)
+    if "synthetic" not in args.split:
+        trainer.eval_dataset = train_dataset
+        metrics = trainer.evaluate()
+        trainer.log_metrics("train-eval", metrics)
 
     if args.save_datasets_in_arrow_format:
         stored_path_train = args.save_datasets_in_arrow_format / args.split.upper()
