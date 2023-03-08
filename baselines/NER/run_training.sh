@@ -17,7 +17,25 @@ GPU="0"
 # Choose for which NER baseline you want to run the training. You can run multiple trainings
 # consecutively by separating them by space but beware that they run in the order in which they are
 # listed at the bottom of this file, not by the order in the `run` list.
+
 run="roberta_base"
+
+# To run all trainings for baselines included in the docile dataset paper, follow these steps.
+# Note: if you don't have enough memory on your GPU, reduce batch size and correspondingly increase
+# --gradient_accumulation_steps
+# Steps:
+# 1. Get pretrained checkpoints for RoBERTa and LayoutLMv3. Either:
+#   1a. download them: follow instructions in baselines/README.md, or
+#   1b. rerun the pretrainings: set run="roberta_pretraining" here for RoBERTa pretraining and run
+#       `python pretrain.py` in baselines/layoutlmv3_pretrain/ directory.
+# 2. Run the following trainings (uncomment to run all consecutively):
+# run="roberta_base roberta_ours layoutlmv3_base layoutlmv3_ours roberta_base_synthetic_pretraining roberta_ours_synthetic_pretraining layoutlmv3_ours_synthetic_pretraining"
+# 3. Move last checkpoints of models pretrained on synthetic data to the expected location:
+# cp -r \
+#   /app/data/baselines/trainings/${MODEL}_synthetic_pretraining/${TIMESTAMP}/checkpoint-187500 \
+#   /app/data/baselines/checkpoints/${MODEL}_187500
+# 4. Run remaining trainings (uncomment to run all consecutively):
+# run="roberta_base_with_synthetic_pretraining roberta_ours_with_synthetic_pretraining layoutlmv3_ours_with_synthetic_pretraining"
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M_%S")
 OUTPUT_DIR_PREFIX="/app/data/baselines/trainings"
@@ -28,7 +46,7 @@ CHECKPOINTS_DIR="/app/data/baselines/checkpoints"
 # Common parameters for all trainings with exception of roberta_pretraining
 DATA="--docile_path /app/data/docile/"
 USE_PREPROCESSED="--preprocessed_dataset_path /app/data/baselines/preprocessed_dataset"
-OTHER_COMMON_PARAMS="--save_total_limit 3 --weight_decay 0.001 --lr 2e-5 --dataloader_num_workers 8 --use_BIO_format --tag_everything --report_all_metrics --stride 0"
+OTHER_COMMON_PARAMS="--save_total_limit 3 --weight_decay 0.001 --lr 2e-5 --dataloader_num_workers 8 --use_BIO_format --tag_everything --report_all_metrics"
 COMMON_PARAMS="${DATA} ${USE_PREPROCESSED} ${OTHER_COMMON_PARAMS}"
 
 # Used for synthetic pretraining of LayoutLMv3
@@ -75,7 +93,7 @@ fi
 
 single_run="roberta_base"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 32 --test_bs 32 --num_epochs 1500 --gradient_accumulation_steps 4 --warmup_ratio 1.0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name roberta-base --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -84,7 +102,7 @@ fi
 
 single_run="roberta_ours"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 32 --test_bs 32 --num_epochs 1000 --gradient_accumulation_steps 1 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name ${CHECKPOINTS_DIR}/roberta_pretraining_50000 --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -93,7 +111,7 @@ fi
 
 single_run="layoutlmv3_base"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 32 --test_bs 32 --num_epochs 1500 --gradient_accumulation_steps 1 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name microsoft/layoutlmv3-base"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -102,7 +120,7 @@ fi
 
 single_run="layoutlmv3_ours"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name microsoft/layoutlmv3-base --pretrained_weights ${CHECKPOINTS_DIR}/layoutlmv3_pretraining.ckpt"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -112,7 +130,7 @@ fi
 single_run="roberta_base_synthetic_pretraining"  # 30 epochs on synthetic data only
 if [[ " ${run} " =~ " ${single_run} " ]]; then
   data_params="--split synthetic"
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 30 --gradient_accumulation_steps 1 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 30 --gradient_accumulation_steps 1"
   model="--model_name roberta-base --use_roberta"
   all_params="${COMMON_PARAMS} ${data_params} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -122,7 +140,7 @@ fi
 single_run="roberta_ours_synthetic_pretraining"  # 30 epochs on synthetic data only
 if [[ " ${run} " =~ " ${single_run} " ]]; then
   data_params="--split synthetic"
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 30 --gradient_accumulation_steps 1 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 30 --gradient_accumulation_steps 1"
   model="--model_name ${CHECKPOINTS_DIR}/roberta_pretraining_50000 --use_roberta"
   all_params="${COMMON_PARAMS} ${data_params} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -132,7 +150,7 @@ fi
 single_run="layoutlmv3_ours_synthetic_pretraining"  # 30 epochs on synthetic data only
 if [[ " ${run} " =~ " ${single_run} " ]]; then
   data_params="--split synthetic ${USE_ARROW}"
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 30 --gradient_accumulation_steps 1 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 30 --gradient_accumulation_steps 1"
   model="--model_name microsoft/layoutlmv3-base --pretrained_weights ${CHECKPOINTS_DIR}/layoutlmv3_pretraining.ckpt"
   all_params="${COMMON_PARAMS} ${data_params} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -141,7 +159,7 @@ fi
 
 single_run="roberta_base_with_synthetic_pretraining"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 8 --test_bs 8 --num_epochs 1500 --gradient_accumulation_steps 8 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name ${CHECKPOINTS_DIR}/roberta_base_synthetic_pretraining_187500 --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -150,7 +168,7 @@ fi
 
 single_run="roberta_ours_with_synthetic_pretraining"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 8 --test_bs 8 --num_epochs 1500 --gradient_accumulation_steps 4 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name ${CHECKPOINTS_DIR}/roberta_ours_synthetic_pretraining_187500 --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -159,7 +177,7 @@ fi
 
 single_run="layoutlmv3_ours_with_synthetic_pretraining"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1500 --gradient_accumulation_steps 1 --warmup_ratio 0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name microsoft/layoutlmv3-base --pretrained_weights ${CHECKPOINTS_DIR}/layoutlmv3_ours_synthetic_pretraining_187500"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -170,7 +188,7 @@ fi
 # Not presented in the dataset paper
 single_run="roberta_base_with_2d_embedding"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 32 --test_bs 32 --num_epochs 1500 --gradient_accumulation_steps 4 --warmup_ratio 1.0"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
   model="--model_name roberta-base --use_roberta --use_new_2D_pos_emb --pos_emb_dim 6500"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
