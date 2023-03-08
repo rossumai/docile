@@ -192,9 +192,9 @@ class MyXLMRobertaMLForTokenClassification(XLMRobertaPreTrainedModel):
             w = r - l
             h = b - t
             pos2_cx_emb = self.pos2_cx_emb((cx / self.quant_step_size + 0.5).int())
-            pos2_cy_emb = self.pos2_cx_emb((cy / self.quant_step_size + 0.5).int())
-            pos2_w_emb = self.pos2_cx_emb((w / self.quant_step_size + 0.5).int())
-            pos2_h_emb = self.pos2_cx_emb((h / self.quant_step_size + 0.5).int())
+            pos2_cy_emb = self.pos2_cy_emb((cy / self.quant_step_size + 0.5).int())
+            pos2_w_emb = self.pos2_w_emb((w / self.quant_step_size + 0.5).int())
+            pos2_h_emb = self.pos2_h_emb((h / self.quant_step_size + 0.5).int())
 
             pos2_emb = pos2_cx_emb + pos2_cy_emb + pos2_w_emb + pos2_h_emb
 
