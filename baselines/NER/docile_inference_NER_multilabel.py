@@ -12,76 +12,8 @@ from my_roberta_multilabel import MyXLMRobertaMLForTokenClassification
 from tqdm import tqdm
 from transformers import AutoConfig, AutoTokenizer
 
-from docile.dataset import BBox, Dataset
+from docile.dataset import KILE_FIELDTYPES, LIR_FIELDTYPES, BBox, Dataset
 from docile.evaluation.evaluate import evaluate_dataset
-
-# from my_roberta import MyXLMRobertaForTokenClassification
-# from my_bert import MyBertForTokenClassification
-
-
-# KILE classes
-KILE_CLASSES = [
-    "account_num",
-    "amount_due",
-    "amount_paid",
-    "amount_total_gross",
-    "amount_total_net",
-    "amount_total_tax",
-    "bank_num",
-    "bic",
-    "currency_code_amount_due",
-    "customer_billing_address",
-    "customer_billing_name",
-    "customer_delivery_address",
-    "customer_delivery_name",
-    "customer_id",
-    "customer_order_id",
-    "customer_other_address",
-    "customer_other_name",
-    "customer_registration_id",
-    "customer_tax_id",
-    "date_due",
-    "date_issue",
-    "document_id",
-    "iban",
-    "order_id",
-    "payment_terms",
-    "tax_detail_gross",
-    "tax_detail_net",
-    "tax_detail_rate",
-    "tax_detail_tax",
-    # 'variable_symbol',
-    "payment_reference",
-    "vendor_address",
-    "vendor_email",
-    "vendor_name",
-    "vendor_order_id",
-    "vendor_registration_id",
-    "vendor_tax_id",
-]
-
-# LIR classes
-LIR_CLASSES = [
-    "line_item_amount_gross",
-    "line_item_amount_net",
-    "line_item_code",
-    "line_item_currency",
-    "line_item_date",
-    "line_item_description",
-    "line_item_discount_amount",
-    "line_item_discount_rate",
-    "line_item_hts_number",
-    "line_item_order_id",
-    "line_item_person_name",
-    "line_item_position",
-    "line_item_quantity",
-    "line_item_tax",
-    "line_item_tax_rate",
-    "line_item_unit_price_gross",
-    "line_item_unit_price_net",
-    "line_item_units_of_measure",
-    "line_item_weight",
-]
 
 
 def dfs(visited, graph, node, out):
@@ -194,7 +126,7 @@ def get_sorted_field_candidates(ocr_fields):
     return fields, clusters
 
 
-def merge_text_boxes(text_boxes, merge_strategy="naive"):
+def merge_text_boxes(text_boxes, merge_strategy="new"):
     # group by fieldtype:
     groups = {}
     for field in text_boxes:
@@ -234,9 +166,9 @@ def merge_text_boxes(text_boxes, merge_strategy="naive"):
             # average final score
             new_field = dataclasses.replace(new_field, score=new_field.score / len(fs))
             # resolve line_item_id
-            if ft in KILE_CLASSES:
+            if ft in KILE_FIELDTYPES:
                 new_field = dataclasses.replace(new_field, line_item_id=None)
-            if ft in LIR_CLASSES and new_field.line_item_id is None:
+            if ft in LIR_FIELDTYPES and new_field.line_item_id is None:
                 new_field = dataclasses.replace(new_field, line_item_id=0)
             final_fields.append(new_field)
 
@@ -248,10 +180,10 @@ def merge_text_boxes(text_boxes, merge_strategy="naive"):
                 new_field = field
                 # resolve line_item_id
                 # if ft.startswith("line_item_") and not new_field.line_item_id:
-                if ft in LIR_CLASSES and new_field.line_item_id is None:
+                if ft in LIR_FIELDTYPES and new_field.line_item_id is None:
                     new_field = dataclasses.replace(new_field, line_item_id=0)
                 # if not ft.startswith("line_item_") and new_field.line_item_id:
-                if ft in KILE_CLASSES:
+                if ft in KILE_FIELDTYPES:
                     new_field = dataclasses.replace(new_field, line_item_id=None)
 
                 gid = int(new_field.groups[0][4:])
@@ -379,42 +311,20 @@ def lir_by_table_transformer(line_item_bboxes, sorted_fields, page):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--split",
-        type=str,
-    )
-    parser.add_argument(
-        "--docile_path",
-        type=Path,
-        default=Path("/storage/pif_documents/dataset_exports/docile221221-0/"),
-    )
-    parser.add_argument(
-        "--overlap_thr",
-        type=float,
-        default=0.5,
-    )
-    parser.add_argument(
-        "--checkpoint",
-        type=str,
-    )
-    parser.add_argument(
-        "--output_dir",
-        # default=Path("/mnt/shared/ailabs/table_extraction/predictions/NER/from_table_crops/docile221221-0/XLM_RoBERTa_Large"),
-        default=Path(
-            "/mnt/shared/ailabs/table_extraction/predictions/NER/from_table_crops/docile221221-0/RoBERTa_base"
-        ),
-        type=Path,
-    )
+    parser.add_argument("--split", type=str)
+    parser.add_argument("--docile_path", type=Path, default=Path("/app/data/docile/"))
+    parser.add_argument("--overlap_thr", type=float, default=0.5)
+    parser.add_argument("--checkpoint", type=str)
+    parser.add_argument("--output_dir", type=Path)
     parser.add_argument(
         "--table_transformer_predictions_dir",
-        default=Path(
-            "/mnt/shared/ailabs/docile/line_item_detection/table_transformer/predictions/"
-        ),
-        help="Directory with table-transformer predictions jsons (see --crop_bboxes_filename)",
         type=Path,
+        help="Directory with table-transformer predictions jsons (see --crop_bboxes_filename)",
+        default=None,
     )
     parser.add_argument(
         "--crop_bboxes_filename",
+        type=str,
         help="Json file in `table_transformer_predictions_dir` with "
         "table crop bboxes e.g. predicted by table-transformer. If provided, NER "
         "will be run only on texts within the crop.",
@@ -422,15 +332,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--line_item_bboxes_filename",
+        type=str,
         help="Json file in `table_transformer_predictions_dir` with "
         "line item bboxes e.g. predicted by table-transformer.",
         default=None,
     )
-    parser.add_argument(
-        "--store_intermediate_results",
-        action="store_true",
-    )
-    parser.add_argument("--merge_strategy", type=str, default="naive")
+    parser.add_argument("--store_intermediate_results", action="store_true")
+    parser.add_argument("--merge_strategy", type=str, default="new")
     args = parser.parse_args()
 
     print(f"{datetime.now()} Started.")
@@ -461,9 +369,9 @@ if __name__ == "__main__":
 
     # fix the old models (variable_symbol -> payment_reference)
     try:
-        print("INFO: model with an obsolete label set. Updating the label-set...")
         model.config.id2label[model.config.label2id["B-variable_symbol"]] = "B-payment_reference"
         model.config.id2label[model.config.label2id["I-variable_symbol"]] = "I-payment_reference"
+        print("INFO: model with an obsolete label set. Updating the label-set...")
     except Exception:
         print("INFO: model with up-to-date label set")
 
@@ -490,7 +398,6 @@ if __name__ == "__main__":
 
     for document in tqdm(dataset):
         doc_id = document.docid
-        # page_to_table_grids = document.annotation.content["metadata"]["page_to_table_grids"]
         gt_kile_fields = document.annotation.fields
         gt_li_fields = document.annotation.li_fields
         pred_kile_fields = []
@@ -505,7 +412,6 @@ if __name__ == "__main__":
             gt_li_fields_page = [field for field in gt_li_fields if field.page == page]
             img = document.page_image(page)
             W, H = img.size
-            # W2, H2 = document.annotation.content["metadata"]["page_shapes"][page]
             gt_kile_fields_page = [
                 dataclasses.replace(field, bbox=field.bbox.to_absolute_coords(W, H))
                 for field in gt_kile_fields_page
@@ -625,9 +531,9 @@ if __name__ == "__main__":
                 pred_lir_classes = []
                 pred_li_classes = []
                 for pc in pred_class:
-                    if pc[0][2:] in KILE_CLASSES or pc[0] == "O-KILE":
+                    if pc[0][2:] in KILE_FIELDTYPES or pc[0] == "O-KILE":
                         pred_kile_classes.append(pc)
-                    if pc[0][2:] in LIR_CLASSES or pc[0] == "O-LIR":
+                    if pc[0][2:] in LIR_FIELDTYPES or pc[0] == "O-LIR":
                         pred_lir_classes.append(pc)
                     if pc[0] == "O-LI" or pc[0] == "B-LI" or pc[0] == "I-LI" or pc[0] == "E-LI":
                         pred_li_classes.append(pc)
@@ -762,7 +668,7 @@ if __name__ == "__main__":
                     and kile_pred == "background"
                     and lir_pred == "background"
                 ):
-                    # TODO: add just one field
+                    # NOTE: add just one field
                     tmp_field_labels.append(
                         FieldWithGroups(
                             fieldtype="background",
@@ -803,7 +709,7 @@ if __name__ == "__main__":
                             )
                         )
                 else:
-                    # TODO: add the field twice, once for kile and once for lir
+                    # NOTE: add the field twice, once for kile and once for lir
                     if not isinstance(kile_pred, list):
                         kile_pred = [kile_pred]
                         kile_score = [kile_score]
@@ -870,10 +776,10 @@ if __name__ == "__main__":
 
         # add final predictions to docid_to_lir_predictions mapping
         docid_to_kile_predictions[doc_id] = [
-            x for x in all_fields_final if x.fieldtype in KILE_CLASSES
+            x for x in all_fields_final if x.fieldtype in KILE_FIELDTYPES
         ]
         docid_to_lir_predictions[doc_id] = [
-            x for x in all_fields_final if x.fieldtype in LIR_CLASSES
+            x for x in all_fields_final if x.fieldtype in LIR_FIELDTYPES
         ]
         if args.store_intermediate_results:
             intermediate_results[doc_id] = intermediate_fields

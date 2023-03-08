@@ -4,13 +4,9 @@ import torch
 import torch.nn as nn
 import torch.utils.checkpoint
 from torch.nn import BCEWithLogitsLoss
-
-# from torch.nn import CrossEntropyLoss
 from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_outputs import TokenClassifierOutput
 from transformers.modeling_utils import PreTrainedModel
-
-# from transformers.models.layoutlmv3.configuration_layoutlmv3 import LayoutLMv3Config
 from transformers.models.layoutlmv3.modeling_layoutlmv3 import (
     LayoutLMv3ClassificationHead,
     LayoutLMv3Model,
@@ -457,11 +453,6 @@ class MyLayoutLMv3ForTokenClassification(MyLayoutLMv3PreTrainedModel):
         sequence_output = outputs[0][:, :seq_length]
         sequence_output = self.dropout(sequence_output)
         logits = self.classifier(sequence_output)
-
-        # loss = None
-        # if labels is not None:
-        #     loss_fct = CrossEntropyLoss()
-        #     loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
         loss = None
         if labels is not None:
