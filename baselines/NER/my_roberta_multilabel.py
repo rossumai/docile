@@ -4,19 +4,12 @@ import torch
 import torch.utils.checkpoint
 from torch import nn
 from torch.nn import BCEWithLogitsLoss
-
-# from torch.nn import CrossEntropyLoss
-from transformers.configuration_utils import PretrainedConfig
 from transformers.modeling_outputs import TokenClassifierOutput
-from transformers.modeling_utils import PreTrainedModel
 from transformers.models.bert.modeling_bert import _CONFIG_FOR_DOC
 from transformers.models.xlm_roberta import XLMRobertaModel
-
-# from transformers.models.xlm_roberta.configuration_xlm_roberta import XLMRobertaConfig
 from transformers.models.xlm_roberta.modeling_xlm_roberta import (
     XLM_ROBERTA_INPUTS_DOCSTRING,
     XLM_ROBERTA_START_DOCSTRING,
-    XLMRobertaEncoder,
     XLMRobertaPreTrainedModel,
 )
 from transformers.utils import (
@@ -24,179 +17,6 @@ from transformers.utils import (
     add_start_docstrings,
     add_start_docstrings_to_model_forward,
 )
-
-
-class MyXLMRobertaMLConfig(PretrainedConfig):
-    r"""
-    This is the configuration class to store the configuration of a [`XLMRobertaModel`] or a [`TFXLMRobertaModel`]. It
-    is used to instantiate a XLM-RoBERTa model according to the specified arguments, defining the model architecture.
-    Instantiating a configuration with the defaults will yield a similar configuration to that of the XLMRoBERTa
-    [xlm-roberta-base](https://huggingface.co/xlm-roberta-base) architecture.
-
-    Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
-    documentation from [`PretrainedConfig`] for more information.
-
-
-    Args:
-        vocab_size (`int`, *optional*, defaults to 30522):
-            Vocabulary size of the XLM-RoBERTa model. Defines the number of different tokens that can be represented by
-            the `inputs_ids` passed when calling [`XLMRobertaModel`] or [`TFXLMRobertaModel`].
-        hidden_size (`int`, *optional*, defaults to 768):
-            Dimensionality of the encoder layers and the pooler layer.
-        num_hidden_layers (`int`, *optional*, defaults to 12):
-            Number of hidden layers in the Transformer encoder.
-        num_attention_heads (`int`, *optional*, defaults to 12):
-            Number of attention heads for each attention layer in the Transformer encoder.
-        intermediate_size (`int`, *optional*, defaults to 3072):
-            Dimensionality of the "intermediate" (often named feed-forward) layer in the Transformer encoder.
-        hidden_act (`str` or `Callable`, *optional*, defaults to `"gelu"`):
-            The non-linear activation function (function or string) in the encoder and pooler. If string, `"gelu"`,
-            `"relu"`, `"silu"` and `"gelu_new"` are supported.
-        hidden_dropout_prob (`float`, *optional*, defaults to 0.1):
-            The dropout probability for all fully connected layers in the embeddings, encoder, and pooler.
-        attention_probs_dropout_prob (`float`, *optional*, defaults to 0.1):
-            The dropout ratio for the attention probabilities.
-        max_position_embeddings (`int`, *optional*, defaults to 512):
-            The maximum sequence length that this model might ever be used with. Typically set this to something large
-            just in case (e.g., 512 or 1024 or 2048).
-        type_vocab_size (`int`, *optional*, defaults to 2):
-            The vocabulary size of the `token_type_ids` passed when calling [`XLMRobertaModel`] or
-            [`TFXLMRobertaModel`].
-        initializer_range (`float`, *optional*, defaults to 0.02):
-            The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
-        layer_norm_eps (`float`, *optional*, defaults to 1e-12):
-            The epsilon used by the layer normalization layers.
-        position_embedding_type (`str`, *optional*, defaults to `"absolute"`):
-            Type of position embedding. Choose one of `"absolute"`, `"relative_key"`, `"relative_key_query"`. For
-            positional embeddings use `"absolute"`. For more information on `"relative_key"`, please refer to
-            [Self-Attention with Relative Position Representations (Shaw et al.)](https://arxiv.org/abs/1803.02155).
-            For more information on `"relative_key_query"`, please refer to *Method 4* in [Improve Transformer Models
-            with Better Relative Position Embeddings (Huang et al.)](https://arxiv.org/abs/2009.13658).
-        use_cache (`bool`, *optional*, defaults to `True`):
-            Whether or not the model should return the last key/values attentions (not used by all models). Only
-            relevant if `config.is_decoder=True`.
-        classifier_dropout (`float`, *optional*):
-            The dropout ratio for the classification head.
-
-    Examples:
-
-    ```python
-    >>> from transformers import XLMRobertaConfig, XLMRobertaModel
-
-    >>> # Initializing a XLM-RoBERTa xlm-roberta-base style configuration
-    >>> configuration = XLMRobertaConfig()
-
-    >>> # Initializing a model (with random weights) from the xlm-roberta-base style configuration
-    >>> model = XLMRobertaModel(configuration)
-
-    >>> # Accessing the model configuration
-    >>> configuration = model.config
-    ```"""
-    # model_type = "my-xlm-roberta"
-    # model_type = "my-xlm-roberta"
-    model_type = "my-roberta-multilabel"
-
-    def __init__(
-        self,
-        vocab_size=30522,
-        hidden_size=768,
-        num_hidden_layers=12,
-        num_attention_heads=12,
-        intermediate_size=3072,
-        hidden_act="gelu",
-        hidden_dropout_prob=0.1,
-        attention_probs_dropout_prob=0.1,
-        max_position_embeddings=512,
-        type_vocab_size=2,
-        initializer_range=0.02,
-        layer_norm_eps=1e-12,
-        pad_token_id=1,
-        bos_token_id=0,
-        eos_token_id=2,
-        position_embedding_type="absolute",
-        use_cache=True,
-        classifier_dropout=None,
-        use_2d_positional_embeddings=False,
-        use_1d_positional_embeddings=False,
-        bb_emb_dim=2500,
-        use_new_2D_pos_emb=False,
-        pos_emb_dim=2500,
-        quant_step_size=5,
-        **kwargs,
-    ):
-        super().__init__(
-            pad_token_id=pad_token_id,
-            bos_token_id=bos_token_id,
-            eos_token_id=eos_token_id,
-            **kwargs,
-        )
-
-        self.vocab_size = vocab_size
-        self.hidden_size = hidden_size
-        self.num_hidden_layers = num_hidden_layers
-        self.num_attention_heads = num_attention_heads
-        self.hidden_act = hidden_act
-        self.intermediate_size = intermediate_size
-        self.hidden_dropout_prob = hidden_dropout_prob
-        self.attention_probs_dropout_prob = attention_probs_dropout_prob
-        self.max_position_embeddings = max_position_embeddings
-        self.type_vocab_size = type_vocab_size
-        self.initializer_range = initializer_range
-        self.layer_norm_eps = layer_norm_eps
-        self.position_embedding_type = position_embedding_type
-        self.use_cache = use_cache
-        self.classifier_dropout = classifier_dropout
-        self.use_2d_positional_embeddings = use_2d_positional_embeddings
-        self.use_1d_positional_embeddings = use_1d_positional_embeddings
-        self.bb_emb_dim = bb_emb_dim
-        self.use_new_2D_pos_emb = use_new_2D_pos_emb
-        self.pos_emb_dim = pos_emb_dim
-        self.quant_step_size = quant_step_size
-
-
-class MyXLMRobertaMLPreTrainedModel(PreTrainedModel):
-    """
-    An abstract class to handle weights initialization and a simple interface for downloading and loading pretrained
-    models.
-    """
-
-    # config_class = XLMRobertaConfig
-    config_class = MyXLMRobertaMLConfig
-    base_model_prefix = "roberta"
-    supports_gradient_checkpointing = True
-    _no_split_modules = []
-
-    # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
-    def _init_weights(self, module):
-        """Initialize the weights"""
-        if isinstance(module, nn.Linear):
-            # Slightly different from the TF version which uses truncated_normal for initialization
-            # cf https://github.com/pytorch/pytorch/pull/5617
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.bias is not None:
-                module.bias.data.zero_()
-        elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=self.config.initializer_range)
-            if module.padding_idx is not None:
-                module.weight.data[module.padding_idx].zero_()
-        elif isinstance(module, nn.LayerNorm):
-            module.bias.data.zero_()
-            module.weight.data.fill_(1.0)
-
-    def _set_gradient_checkpointing(self, module, value=False):
-        if isinstance(module, XLMRobertaEncoder):
-            module.gradient_checkpointing = value
-
-    def update_keys_to_ignore(self, config, del_keys_to_ignore):
-        """Remove some keys from ignore list"""
-        if not config.tie_word_embeddings:
-            # must make a new list, or the class variable gets modified!
-            self._keys_to_ignore_on_save = [
-                k for k in self._keys_to_ignore_on_save if k not in del_keys_to_ignore
-            ]
-            self._keys_to_ignore_on_load_missing = [
-                k for k in self._keys_to_ignore_on_load_missing if k not in del_keys_to_ignore
-            ]
 
 
 class MyRobertaClassificationHead(nn.Module):
@@ -396,9 +216,7 @@ class MyXLMRobertaMLForTokenClassification(XLMRobertaPreTrainedModel):
 
         loss = None
         if labels is not None:
-            # loss_fct = CrossEntropyLoss()
             loss_fct = BCEWithLogitsLoss()
-            # loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
             loss = loss_fct(logits, labels.float())
 
         if not return_dict:

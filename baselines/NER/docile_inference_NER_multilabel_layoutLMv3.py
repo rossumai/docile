@@ -7,83 +7,15 @@ from pathlib import Path
 
 import numpy as np
 import torch
-
-# from data_collator import MyLayoutLMv3MLDataCollatorForTokenClassification
 from helpers import FieldWithGroups, show_summary
 from my_layoutlmv3 import MyLayoutLMv3ForTokenClassification
 from PIL import Image
 from tqdm import tqdm
 from transformers import AutoConfig
-
-# from transformers import AutoTokenizer
 from transformers.models.layoutlmv3.processing_layoutlmv3 import LayoutLMv3Processor
 
-from docile.dataset import BBox, Dataset
+from docile.dataset import KILE_FIELDTYPES, LIR_FIELDTYPES, BBox, Dataset
 from docile.evaluation import evaluate_dataset
-
-# KILE classes
-KILE_CLASSES = [
-    "account_num",
-    "amount_due",
-    "amount_paid",
-    "amount_total_gross",
-    "amount_total_net",
-    "amount_total_tax",
-    "bank_num",
-    "bic",
-    "currency_code_amount_due",
-    "customer_billing_address",
-    "customer_billing_name",
-    "customer_delivery_address",
-    "customer_delivery_name",
-    "customer_id",
-    "customer_order_id",
-    "customer_other_address",
-    "customer_other_name",
-    "customer_registration_id",
-    "customer_tax_id",
-    "date_due",
-    "date_issue",
-    "document_id",
-    "iban",
-    "order_id",
-    "payment_terms",
-    "tax_detail_gross",
-    "tax_detail_net",
-    "tax_detail_rate",
-    "tax_detail_tax",
-    # 'variable_symbol',
-    "payment_reference",
-    "vendor_address",
-    "vendor_email",
-    "vendor_name",
-    "vendor_order_id",
-    "vendor_registration_id",
-    "vendor_tax_id",
-]
-
-# LIR classes
-LIR_CLASSES = [
-    "line_item_amount_gross",
-    "line_item_amount_net",
-    "line_item_code",
-    "line_item_currency",
-    "line_item_date",
-    "line_item_description",
-    "line_item_discount_amount",
-    "line_item_discount_rate",
-    "line_item_hts_number",
-    "line_item_order_id",
-    "line_item_person_name",
-    "line_item_position",
-    "line_item_quantity",
-    "line_item_tax",
-    "line_item_tax_rate",
-    "line_item_unit_price_gross",
-    "line_item_unit_price_net",
-    "line_item_units_of_measure",
-    "line_item_weight",
-]
 
 
 def dfs(visited, graph, node, out):
@@ -205,7 +137,7 @@ def get_sorted_field_candidates(ocr_fields):
     return fields, clusters
 
 
-def merge_text_boxes(text_boxes, merge_strategy="naive"):
+def merge_text_boxes(text_boxes, merge_strategy="new"):
     # group by fieldtype:
     groups = {}
     for field in text_boxes:
@@ -245,9 +177,9 @@ def merge_text_boxes(text_boxes, merge_strategy="naive"):
             # average final score
             new_field = dataclasses.replace(new_field, score=new_field.score / len(fs))
             # resolve line_item_id
-            if ft in KILE_CLASSES:
+            if ft in KILE_FIELDTYPES:
                 new_field = dataclasses.replace(new_field, line_item_id=None)
-            if ft in LIR_CLASSES and new_field.line_item_id is None:
+            if ft in LIR_FIELDTYPES and new_field.line_item_id is None:
                 new_field = dataclasses.replace(new_field, line_item_id=0)
             final_fields.append(new_field)
 
@@ -259,10 +191,10 @@ def merge_text_boxes(text_boxes, merge_strategy="naive"):
                 new_field = field
                 # resolve line_item_id
                 # if ft.startswith("line_item_") and not new_field.line_item_id:
-                if ft in LIR_CLASSES and new_field.line_item_id is None:
+                if ft in LIR_FIELDTYPES and new_field.line_item_id is None:
                     new_field = dataclasses.replace(new_field, line_item_id=0)
                 # if not ft.startswith("line_item_") and new_field.line_item_id:
-                if ft in KILE_CLASSES:
+                if ft in KILE_FIELDTYPES:
                     new_field = dataclasses.replace(new_field, line_item_id=None)
 
                 gid = int(new_field.groups[0][4:])
@@ -362,33 +294,13 @@ def merge_text_boxes(text_boxes, merge_strategy="naive"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--split",
-        type=str,
-    )
-    parser.add_argument(
-        "--docile_path",
-        type=Path,
-        default=Path("/storage/pif_documents/dataset_exports/docile221221-0/"),
-    )
-    parser.add_argument(
-        "--overlap_thr",
-        type=float,
-        default=0.5,
-    )
-    parser.add_argument(
-        "--checkpoint",
-        type=str,
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=Path,
-    )
-    parser.add_argument(
-        "--store_intermediate_results",
-        action="store_true",
-    )
-    parser.add_argument("--merge_strategy", type=str, default="naive")
+    parser.add_argument("--split", type=str)
+    parser.add_argument("--docile_path", type=Path, default=Path("/app/data/docile/"))
+    parser.add_argument("--overlap_thr", type=float, default=0.5)
+    parser.add_argument("--checkpoint", type=str)
+    parser.add_argument("--output_dir", type=Path)
+    parser.add_argument("--store_intermediate_results", action="store_true")
+    parser.add_argument("--merge_strategy", type=str, default="new")
     args = parser.parse_args()
 
     print(f"{datetime.now()} Started.")
@@ -412,29 +324,24 @@ if __name__ == "__main__":
 
     config = AutoConfig.from_pretrained(args.checkpoint)
     stride = 0
-    # tokenizer = AutoTokenizer.from_pretrained(args.checkpoint)
     processor = LayoutLMv3Processor.from_pretrained("microsoft/layoutlmv3-base", apply_ocr=False)
 
-    # model = MyXLMRobertaMLForTokenClassification.from_pretrained(args.checkpoint, config=config).to(device)
     model = MyLayoutLMv3ForTokenClassification.from_pretrained(args.checkpoint, config=config).to(
         device
     )
 
     # fix the old models (variable_symbol -> payment_reference)
     try:
-        print("INFO: model with an obsolete label set. Updating the label-set...")
         model.config.id2label[model.config.label2id["B-variable_symbol"]] = "B-payment_reference"
         model.config.id2label[model.config.label2id["I-variable_symbol"]] = "I-payment_reference"
+        print("INFO: model with an obsolete label set. Updating the label-set...")
     except Exception:
         print("INFO: model with up-to-date label set")
 
     model.eval()
 
-    # collator = MyLayoutLMv3MLDataCollatorForTokenClassification(processor)
-
     for document in tqdm(dataset):
         doc_id = document.docid
-        # page_to_table_grids = document.annotation.content["metadata"]["page_to_table_grids"]
         gt_kile_fields = document.annotation.fields
         gt_li_fields = document.annotation.li_fields
         pred_kile_fields = []
@@ -474,7 +381,6 @@ if __name__ == "__main__":
             # groups = [x.groups for x in sorted_fields]
             groups = [x.line_item_id for x in sorted_fields]
 
-            # bboxes.append([normalize_bbox(np.array([d[0][0], d[0][1], d[0][2], d[0][3]], dtype=np.int32), (W, H)) for d in pt_info])
             bboxes_preprocessed = [normalize_bbox(bb, (W, H)) for bb in bboxes]
 
             encoding = processor(
@@ -557,9 +463,9 @@ if __name__ == "__main__":
                 pred_lir_classes = []
                 pred_li_classes = []
                 for pc in pred_class:
-                    if pc[0][2:] in KILE_CLASSES or pc[0] == "O-KILE":
+                    if pc[0][2:] in KILE_FIELDTYPES or pc[0] == "O-KILE":
                         pred_kile_classes.append(pc)
-                    if pc[0][2:] in LIR_CLASSES or pc[0] == "O-LIR":
+                    if pc[0][2:] in LIR_FIELDTYPES or pc[0] == "O-LIR":
                         pred_lir_classes.append(pc)
                     if pc[0] == "O-LI" or pc[0] == "B-LI" or pc[0] == "I-LI" or pc[0] == "E-LI":
                         pred_li_classes.append(pc)
@@ -694,7 +600,7 @@ if __name__ == "__main__":
                     and kile_pred == "background"
                     and lir_pred == "background"
                 ):
-                    # TODO: add just one field
+                    # NOTE: add just one field
                     tmp_field_labels.append(
                         FieldWithGroups(
                             fieldtype="background",
@@ -735,7 +641,7 @@ if __name__ == "__main__":
                             )
                         )
                 else:
-                    # TODO: add the field twice, once for kile and once for lir
+                    # NOTE: add the field twice, once for kile and once for lir
                     if not isinstance(kile_pred, list):
                         kile_pred = [kile_pred]
                         kile_score = [kile_score]
@@ -797,10 +703,10 @@ if __name__ == "__main__":
 
         # add final predictions to docid_to_lir_predictions mapping
         docid_to_kile_predictions[doc_id] = [
-            x for x in all_fields_final if x.fieldtype in KILE_CLASSES
+            x for x in all_fields_final if x.fieldtype in KILE_FIELDTYPES
         ]
         docid_to_lir_predictions[doc_id] = [
-            x for x in all_fields_final if x.fieldtype in LIR_CLASSES
+            x for x in all_fields_final if x.fieldtype in LIR_FIELDTYPES
         ]
         if args.store_intermediate_results:
             intermediate_results[doc_id] = intermediate_fields

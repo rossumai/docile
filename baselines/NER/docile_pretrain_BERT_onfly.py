@@ -49,19 +49,12 @@ class ScriptArguments:
         default=None,
         metadata={"help": "The repository id of the dataset to use (via the datasets library)."},
     )
-    # tokenizer_id: str = dataclasses.field(
-    #     default=None, metadata={"help": "The repository id of the tokenizer to use (via AutoTokenizer)."}
-    # )
     output_dir: str = dataclasses.field(
         default=Path("/storage/table_extraction/pretrain_roberta/"),
         metadata={
             "help": "The repository id where the model will be saved or loaded from for further pre-training."
         },
     )
-    # hf_hub_token: str = dataclasses.field(
-    #     default=False,
-    #     metadata={"help": "The Token used to push models, metrics and logs to the Hub."},
-    # )
     model_config_id: Optional[str] = dataclasses.field(
         # default="bert-base-uncased", metadata={"help": "Pretrained config name or path if not the same as model_name"}
         default="roberta-base",
@@ -221,7 +214,7 @@ class DataLoaderWrapper(TorchDataset):
         # document.page_count = num_pages
         page_num = np.random.randint(low=0, high=num_pages, size=1)[0]
         ocr = document.ocr.get_all_words(page_num, snapped=True)
-        # TODO: re-order the OCR tokens, so it is top-to-bottom left-to-right
+        # NOTE: re-order the OCR tokens, so it is top-to-bottom left-to-right
         if self.re_order_ocr_boxes:
             sorted_field, _ = get_sorted_field_candidates(ocr)
             tokens = [x.text for x in sorted_field]
@@ -253,12 +246,6 @@ def run_mlm():
     seed = 34
     set_seed(seed)
 
-    # # load processed dataset
-    # # train_dataset = load_dataset(script_args.dataset_id, split="train")
-    # train_dm = DataMaker()
-    # train_dataset = train_dm.as_hf_dataset(tokenizer)
-    # load trained tokenizer
-    # tokenizer = AutoTokenizer.from_pretrained(script_args.tokenizer_id)
     tokenizer = AutoTokenizer.from_pretrained(
         script_args.model_config_id,
         add_prefix_space=True if script_args.model_config_id == "roberta-base" else False,
@@ -268,14 +255,12 @@ def run_mlm():
         script_args.split, script_args.docile_path, load_annotations=False, load_ocr=False
     )
 
-    # train_dataset = DataLoaderWrapper(dataset, tokenizer)
     train_dataset = DataLoaderWrapper(dataset, tokenizer, script_args.re_order_ocr_boxes)
 
     # load model from config (for training from scratch)
     logger.info("Training new model from scratch")
     config = AutoConfig.from_pretrained(script_args.model_config_id)
 
-    # model = AutoModelForMaskedLM.from_pretrained(config)
     model = AutoModelForMaskedLM.from_config(config)
 
     logger.info(f"Resizing token embedding to {len(tokenizer)}")

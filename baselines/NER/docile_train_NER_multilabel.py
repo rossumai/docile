@@ -11,85 +11,26 @@ import torchmetrics
 from data_collator import MyMLDataCollatorForTokenClassification
 from datasets import Dataset as ArrowDataset
 from helpers import FieldWithGroups, show_summary
-
-# from my_bert import MyBertForTokenClassification
 from my_roberta_multilabel import MyXLMRobertaMLForTokenClassification
 from tqdm import tqdm
 from transformers import AutoTokenizer, Trainer, TrainingArguments
-
-# from transformers.models.bert.configuration_bert import BertConfig
 from transformers.models.roberta.configuration_roberta import RobertaConfig
 
-# from docile.dataset.bbox import BBox
-from docile.dataset import Dataset
+from docile.dataset import KILE_FIELDTYPES, LIR_FIELDTYPES, Dataset
 
-classes = [
-    # 'background',
-    # special background classes
-    "KILE_background",
-    "LI_background",
-    "LIR_background",
-    # LI class
-    # 'LI',  #  NOTE: will be added separately to unique_entities
-    # KILE classes
-    "account_num",
-    "amount_due",
-    "amount_paid",
-    "amount_total_gross",
-    "amount_total_net",
-    "amount_total_tax",
-    "bank_num",
-    "bic",
-    "currency_code_amount_due",
-    "customer_billing_address",
-    "customer_billing_name",
-    "customer_delivery_address",
-    "customer_delivery_name",
-    "customer_id",
-    "customer_order_id",
-    "customer_other_address",
-    "customer_other_name",
-    "customer_registration_id",
-    "customer_tax_id",
-    "date_due",
-    "date_issue",
-    "document_id",
-    "iban",
-    "order_id",
-    "payment_terms",
-    "tax_detail_gross",
-    "tax_detail_net",
-    "tax_detail_rate",
-    "tax_detail_tax",
-    # "variable_symbol",
-    "payment_reference",
-    "vendor_address",
-    "vendor_email",
-    "vendor_name",
-    "vendor_order_id",
-    "vendor_registration_id",
-    "vendor_tax_id",
-    # LIR classes
-    "line_item_amount_gross",
-    "line_item_amount_net",
-    "line_item_code",
-    "line_item_currency",
-    "line_item_date",
-    "line_item_description",
-    "line_item_discount_amount",
-    "line_item_discount_rate",
-    "line_item_hts_number",
-    "line_item_order_id",
-    "line_item_person_name",
-    "line_item_position",
-    "line_item_quantity",
-    "line_item_tax",
-    "line_item_tax_rate",
-    "line_item_unit_price_gross",
-    "line_item_unit_price_net",
-    "line_item_units_of_measure",
-    "line_item_weight",
-]
+classes = (
+    [
+        # 'background',
+        # special background classes
+        "KILE_background",
+        "LI_background",
+        "LIR_background",
+        # LI class
+        # 'LI',  #  NOTE: will be added separately to unique_entities
+    ]
+    + KILE_FIELDTYPES
+    + LIR_FIELDTYPES
+)
 
 
 def tag_fields_with_entities(fields, unique_entities=[]):  # noqa: B006
@@ -446,7 +387,6 @@ def get_data_from_docile(split, docile_path, overlap_thr=0.5):
         for page in range(document.page_count):
             img = document.page_image(page)
             W, H = img.size
-            # W2, H2 = document.annotation.content["metadata"]["page_shapes"][page]
             kile_fields_page = [field for field in kile_fields if field.page == page]
             li_fields_page = [field for field in li_fields if field.page == page]
             kile_fields_page = [
@@ -470,34 +410,6 @@ def get_data_from_docile(split, docile_path, overlap_thr=0.5):
             ]
 
             # 0. Get table grid
-            # # table_grid = page_to_table_grids[f"{page+1}"]
-            # table_grid = page_to_table_grids.get(f"{page+1}", None)
-            # if not table_grid:
-            #     # No table on this page
-            #     continue
-            # sfx = W/W2
-            # sfy = H/H2
-            # tables_bbox = []
-            # row_sep = []
-            # for table in table_grid:
-            #     t_w = table["width"]
-            #     t_h = table["height"]
-            #     l = table["columns"][0]["left_position"]*sfx
-            #     r = l+(t_w*sfx)
-            #     t = table["rows"][0]["top_position"]*sfy
-            #     b = t+(t_h*sfy)
-            #     row_sep.append([])
-            #     tables_bbox.append(BBox(l, t, r, b))
-            #     flag = True
-            #     first_row = 0
-            #     for row in table["rows"]:
-            #         sep = row["top_position"]*sfy
-            #         if flag:
-            #             first_row = sep
-            #             flag = False
-            #         row_sep[-1].append(sep)
-            #     sep = first_row + (t_h*sfy)
-            #     row_sep[-1].append(sep)
             table_grid = document.annotation.get_table_grid(page)
             tables_bbox = table_grid.bbox.to_absolute_coords(W, H) if table_grid else None
 
@@ -519,25 +431,10 @@ def get_data_from_docile(split, docile_path, overlap_thr=0.5):
                 updated_ocr.append(new_ocr_field)
             ocr = updated_ocr
 
-            # groups = {}
-            # for f in ocr:
-            #     extra_chars = "[]''"
-            #     gid = str(f.groups).strip(extra_chars)
-            #     if gid not in groups:
-            #         groups[gid] = [f]
-            #     else:
-            #         groups[gid].append(f)
-
             # Re-Order OCR boxes
-            # sorted_fields, _ = get_sorted_field_candidates(groups)
             sorted_fields, _ = get_sorted_field_candidates(ocr)
 
             tables_ocr = []
-            # for table in tables_bbox:
-            #     tables_ocr.append([])
-            #     for field in sorted_fields:
-            #         if table.intersection(field.bbox).area / field.bbox.area >= overlap_thr:
-            #             tables_ocr[-1].append(field)
             if tables_bbox:
                 for field in sorted_fields:
                     if tables_bbox.intersection(field.bbox).area / field.bbox.area >= overlap_thr:
@@ -614,7 +511,6 @@ def load_data(src: Path):
     for table_data in A:
         out.append([])
         for field in table_data:
-            # out[-1].append(FieldWithGroups.from_annotation(field))
             out[-1].append(FieldWithGroups.from_dict(field))
     return out
 
@@ -644,7 +540,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--docile_path",
         type=Path,
-        default=Path("/storage/pif_documents/dataset_exports/docile221221-0/"),
+        default=Path("/app/data/docile/"),
     )
     parser.add_argument(
         "--split",
@@ -843,7 +739,6 @@ if __name__ == "__main__":
         tokenizer=tokenizer, max_length=512, padding="longest"
     )
 
-    # TODO (michal.uricar) 10.1.2023 new classes definition - modify this
     if args.use_BIO_format:
         # add complete background ()
         # unique_entities = ["O"]
@@ -966,10 +861,6 @@ if __name__ == "__main__":
                 args.save_datasets_in_arrow_format / f"NER_{args.hgdataset_dir_train.name}"
             )
 
-    # if args.use_bert:
-    #     config = BertConfig.from_pretrained(args.model_name)
-    # elif args.use_roberta:
-    #     config = RobertaConfig.from_pretrained(args.model_name)
     if args.use_roberta:
         config = RobertaConfig.from_pretrained(args.model_name)
     else:
@@ -979,29 +870,6 @@ if __name__ == "__main__":
 
     # instantiate model
     if args.use_roberta:
-        # if "checkpoint" in args.model_name:
-        #     model = MyXLMRobertaMLForTokenClassification.from_pretrained(args.model_name)
-        # else:
-        #     config.use_2d_positional_embeddings = args.use_2d_positional_embeddings
-        #     config.use_1d_positional_embeddings = args.use_1d_positional_embeddings
-        #     config.use_new_2D_pos_emb = args.use_new_2D_pos_emb
-        #     config.pos_emb_dim = args.pos_emb_dim
-        #     config.quant_step_size = args.quant_step_size
-        #     config.stride = args.stride
-        #     config.bb_emb_dim = args.bb_emb_dim
-        #     config.tag_everything = args.tag_everything
-        #     config.num_labels = len(unique_entities)
-        #     config.id2label = id2label
-        #     config.label2id = label2id
-        #     config.model_name = args.model_name
-        #     config.use_bert = args.use_bert
-        #     config.use_roberta = args.use_roberta
-        #     config.use_BIO_format = args.use_BIO_format
-        #     config.use_2d_concat = args.use_2d_concat
-
-        #     model = MyXLMRobertaMLForTokenClassification.from_pretrained(
-        #         args.model_name, config=config
-        #     )
         config.use_2d_positional_embeddings = args.use_2d_positional_embeddings
         config.use_1d_positional_embeddings = args.use_1d_positional_embeddings
         config.use_new_2D_pos_emb = args.use_new_2D_pos_emb
@@ -1023,8 +891,6 @@ if __name__ == "__main__":
         model = MyXLMRobertaMLForTokenClassification.from_pretrained(
             args.model_name, config=config
         )
-    # elif args.use_bert:
-    #     model = MyBertForTokenClassification.from_pretrained(args.model_name, config=config)
 
     training_args = TrainingArguments(
         output_dir=os.path.join(args.output_dir),
@@ -1040,7 +906,6 @@ if __name__ == "__main__":
         save_total_limit=args.save_total_limit,
         seed=42,
         data_seed=42,
-        # metric_for_best_model="f1",
         metric_for_best_model="OVERALL_f1",
         greater_is_better=True,
         warmup_steps=args.warmup_steps,
