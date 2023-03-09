@@ -131,6 +131,8 @@ Explanation of the individual fields of the predictions:
 
 You can use [Field class](docile/dataset/field.py) to work with the predictions in code, in which case you can store them in a json file in the required format by using the `docile.dataset.store_predictions` function. You can also use the [BBox class](docile/dataset/bbox.py) to easily convert between relative and absolute coordinates (relative coordinates are used everywhere by default).
 
+Use [docile/tools/print_results.py](docile/tools/print_results.py) to display results of your predictions formatted in a table (choosing from table styles like github, latex or csv).
+
 ## Tasks and evaluation metrics
 
 The DocILE benchmark comes with two tracks, Key Information Localization and Extraction (KILE) and Line Item Recognition (LIR), as described in the [dataset and benchmark paper](#dataset-and-benchmark-paper). In both tracks, the goal is to localize key information of pre-defined categories, i.e., for each document, detect fields with their `fieldtype`, location (`page` and `bbox`) and optionally `text`. For LIR, fields have to be additionally grouped into line items. A Line Item (LI) is a tuple of fields (e.g., description, quantity, and price) describing a single object instance to be extracted, e.g., a row in a table.
