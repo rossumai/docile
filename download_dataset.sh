@@ -109,9 +109,12 @@ elif [[ "$dataset" == "baselines" ]]; then
   download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-base"
   download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-ours"
   download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-ours"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-detr"
   download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-pretraining"
   download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-detr"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-base-with-synthetic-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-ours-with-synthetic-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-ours-with-synthetic-pretraining"
 else
   download_and_unzip "$token" "$targetdir" "$unzip" "$dataset"
 fi
