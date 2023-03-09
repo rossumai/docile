@@ -3,6 +3,7 @@ import base64
 import dataclasses
 import io
 import json
+import math
 import os
 from bisect import bisect_left, bisect_right
 from datetime import datetime
@@ -14,6 +15,7 @@ import torch
 import torchmetrics
 from data_collator import MyLayoutLMv3MLDataCollatorForTokenClassification
 from datasets import Dataset as ArrowDataset
+from datasets import concatenate_datasets
 from helpers import FieldWithGroups, show_summary
 from my_layoutlmv3 import MyLayoutLMv3ForTokenClassification
 from PIL import Image
@@ -129,7 +131,9 @@ class NERDataMaker:
 
         temp_processed_tables = []
         self.metadata = []
-        for page_data, page_metadata in zip(data, metadata):
+        for page_data, page_metadata in tqdm(
+            zip(data, metadata), desc="Processing tables 1/2", total=len(data)
+        ):
             tokens_with_entities = tag_fields_with_entities(page_data, self.unique_entities)
             if tokens_with_entities:
                 if not have_unique_entities:
@@ -142,7 +146,7 @@ class NERDataMaker:
         if not have_unique_entities:
             self.unique_entities.sort(key=lambda ent: ent if ent != "O" else "")
 
-        for tokens_with_entities in temp_processed_tables:
+        for tokens_with_entities in tqdm(temp_processed_tables, desc="Processing tables 2/2"):
             self.processed_tables.append(
                 [
                     # (t, self.unique_entities.index(ent), info)
@@ -398,12 +402,11 @@ def get_sorted_field_candidates(original_fields):
     return fields, clusters
 
 
-def get_data_from_docile(split, docile_path, overlap_thr=0.5):
+def get_data_from_docile(dataset, overlap_thr=0.5):
     data = []
     metadata = []
-    dataset = Dataset(split, docile_path)
 
-    for document in tqdm(dataset):
+    for document in tqdm(dataset, desc=f"Generating data from {dataset}"):
         doc_id = document.docid
         # page_to_table_grids = document.annotation.content["metadata"]["page_to_table_grids"]
 
@@ -603,6 +606,103 @@ def store_data(dest: Path, data):
         json.dump(out, json_file)
 
 
+def _arrow_dataset_path(arrow_format_path, docile_dataset):
+    return arrow_format_path / f"{docile_dataset.split_name}_withImgs"
+
+
+def prepare_hf_dataset(
+    docile_dataset,
+    processor,
+    overlap_thr,
+    arrow_format_path,
+    preprocessed_dataset_path,
+    chunk_size=10000,
+):
+    if len(docile_dataset) > chunk_size:
+        if not arrow_format_path:
+            raise NotImplementedError(
+                f"You need to set --arrow-format-path because {docile_dataset} has more than 10000 documents"
+            )
+        num_chunks = math.ceil(len(docile_dataset) / chunk_size)
+        dataset_chunks = []
+        for chunk in range(num_chunks):
+            chunk_dataset = docile_dataset[chunk * chunk_size : (chunk + 1) * chunk_size]
+            chunk_dataset.split_name = f"{docile_dataset.split_name}_chunk_{chunk}_of_{num_chunks}"
+            # make sure the chunk is stored to disk
+            prepare_hf_dataset(
+                chunk_dataset,
+                processor,
+                overlap_thr,
+                arrow_format_path,
+                preprocessed_dataset_path,
+                chunk_size,
+            )
+            # load it from disk
+            dataset_chunk = ArrowDataset.load_from_disk(
+                _arrow_dataset_path(arrow_format_path, chunk_dataset)
+            )
+            dataset_chunks.append(dataset_chunk)
+        return concatenate_datasets(dataset_chunks)
+
+    if arrow_format_path:
+        try:
+            load_path = _arrow_dataset_path(arrow_format_path, docile_dataset)
+            print(f"Loading dataset in arrow format from path {load_path}")
+            return ArrowDataset.load_from_disk(load_path)
+        except Exception:
+            print(f"Could not load {docile_dataset.split_name} in arrow format, regenerating.")
+
+    if preprocessed_dataset_path:
+        dataset_name = docile_dataset.data_paths.name
+        preprocessed_path = preprocessed_dataset_path / dataset_name
+        print(
+            f"Loading preprocessed {docile_dataset.split_name} data from path {preprocessed_path}"
+        )
+        try:
+            data = load_data(
+                preprocessed_path
+                / f"{docile_dataset.split_name}_multilabel_preprocessed_withImgs.json"
+            )
+            metadata = load_metadata(
+                preprocessed_path
+                / f"{docile_dataset.split_name}_multilabel_metadata_withImgs.json"
+            )
+        except Exception:
+            print(f"Could not load preprocessed {docile_dataset.split_name}, regenerating.")
+            data, metadata = get_data_from_docile(docile_dataset, overlap_thr=overlap_thr)
+            print(
+                f"Storing preprocessed {docile_dataset.split_name} data to {preprocessed_dataset_path}"
+            )
+            os.makedirs(preprocessed_dataset_path / dataset_name, exist_ok=True)
+            store_data(
+                preprocessed_path
+                / f"{docile_dataset.split_name}_multilabel_preprocessed_withImgs.json",
+                data,
+            )
+            store_metadata(
+                preprocessed_path
+                / f"{docile_dataset.split_name}_multilabel_metadata_withImgs.json",
+                metadata,
+            )
+    else:
+        data, metadata = get_data_from_docile(docile_dataset, overlap_thr=overlap_thr)
+
+    data_maker = NERDataMaker(data, metadata, unique_entities=unique_entities, use_BIO_format=True)
+    print("Converting dataset to HuggingFace format")
+    dataset = data_maker.as_hf_dataset(
+        processor=processor, stride=args.stride, tag_everything=args.tag_everything
+    )
+    if arrow_format_path:
+        store_path = _arrow_dataset_path(arrow_format_path, docile_dataset)
+        print(
+            f"Storing HuggingFace Dataset for {docile_dataset.split_name} in arrow format to: {store_path}"
+        )
+        dataset.save_to_disk(store_path)
+        print(f"HuggingFace Dataset for {docile_dataset.split_name} in arrow format stored")
+
+    return dataset
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -722,23 +822,12 @@ if __name__ == "__main__":
         default=2500,
     )
     parser.add_argument(
-        "--arrow_format",
-        action="store_true",
-        help="",
-    )
-    parser.add_argument("--save_datasets_in_arrow_format", type=Path, default=None)
-    parser.add_argument(
-        "--dataset_name",
-        type=str,
-        default="docile221221-0",
-    )
-    parser.add_argument(
-        "--load_from_preprocessed",
+        "--arrow_format_path",
         type=Path,
         default=None,
     )
     parser.add_argument(
-        "--store_preprocessed",
+        "--preprocessed_dataset_path",
         type=Path,
         default=None,
     )
@@ -816,107 +905,24 @@ if __name__ == "__main__":
     id2label = dict(enumerate(unique_entities))
     label2id = {v: k for k, v in id2label.items()}
 
-    if args.arrow_format:
-        val_dataset = ArrowDataset.load_from_disk(args.load_from_preprocessed / "VAL")
-        train_dataset = ArrowDataset.load_from_disk(
-            args.load_from_preprocessed / args.split.upper()
-        )
-    else:
-        # Prepare val dataset
-        if args.load_from_preprocessed:
-            try:
-                val_data = load_data(
-                    args.load_from_preprocessed
-                    / args.dataset_name
-                    / "val_multilabel_preprocessed_withImgs.json"
-                )
-                val_metadata = load_metadata(
-                    args.load_from_preprocessed
-                    / args.dataset_name
-                    / "val_multilabel_metadata_withImgs.json"
-                )
-            except Exception:
-                print(
-                    f"WARNING: could not load val_data from {args.load_from_preprocessed}. Need to generate them again..."
-                )
-                val_data, val_metadata = get_data_from_docile(
-                    "val", args.docile_path, overlap_thr=args.overlap_thr
-                )
-        else:
-            val_data, val_metadata = get_data_from_docile(
-                "val", args.docile_path, overlap_thr=args.overlap_thr
-            )
-        if args.store_preprocessed:
-            os.makedirs(args.store_preprocessed / args.dataset_name, exist_ok=True)
-            store_metadata(
-                args.store_preprocessed
-                / args.dataset_name
-                / "val_multilabel_metadata_withImgs.json",
-                val_metadata,
-            )
-            store_data(
-                args.store_preprocessed
-                / args.dataset_name
-                / "val_multilabel_preprocessed_withImgs.json",
-                val_data,
-            )
-
-        val_dm = NERDataMaker(
-            val_data, val_metadata, unique_entities=unique_entities, use_BIO_format=True
-        )
-        val_dataset = val_dm.as_hf_dataset(
-            processor=processor, stride=args.stride, tag_everything=args.tag_everything
-        )
-        if args.save_datasets_in_arrow_format:
-            val_dataset.save_to_disk(args.save_datasets_in_arrow_format / "VAL")
-
-        # Prepare train dataset
-        if args.load_from_preprocessed:
-            try:
-                train_data = load_data(
-                    args.load_from_preprocessed
-                    / args.dataset_name
-                    / f"{args.split}_multilabel_preprocessed_withImgs.json"
-                )
-                train_metadata = load_metadata(
-                    args.load_from_preprocessed
-                    / args.dataset_name
-                    / f"{args.split}_multilabel_metadata_withImgs.json"
-                )
-            except Exception:
-                print(
-                    f"WARNING: could not load train_data from {args.load_from_preprocessed}. Need to generate them again..."
-                )
-                train_data, train_metadata = get_data_from_docile(
-                    args.split, args.docile_path, overlap_thr=args.overlap_thr
-                )
-        else:
-            train_data, train_metadata = get_data_from_docile(
-                args.split, args.docile_path, overlap_thr=args.overlap_thr
-            )
-        if args.store_preprocessed:
-            os.makedirs(args.store_preprocessed / args.dataset_name, exist_ok=True)
-            store_data(
-                args.store_preprocessed
-                / args.dataset_name
-                / f"{args.split}_multilabel_preprocessed_withImgs.json",
-                train_data,
-            )
-            store_metadata(
-                args.store_preprocessed
-                / args.dataset_name
-                / f"{args.split}_multilabel_metadata_withImgs.json",
-                train_metadata,
-            )
-
-        train_dm = NERDataMaker(
-            train_data, train_metadata, unique_entities=unique_entities, use_BIO_format=True
-        )
-        train_dataset = train_dm.as_hf_dataset(
-            processor=processor, stride=args.stride, tag_everything=args.tag_everything
-        )
-        if args.save_datasets_in_arrow_format:
-            train_dataset.save_to_disk(args.save_datasets_in_arrow_format / args.split.upper())
+    val_docile_dataset = Dataset("val", args.docile_path, load_annotations=False, load_ocr=False)
+    val_dataset = prepare_hf_dataset(
+        val_docile_dataset,
+        processor,
+        args.overlap_thr,
+        args.arrow_format_path,
+        args.preprocessed_dataset_path,
+    )
+    train_docile_dataset = Dataset(
+        args.split, args.docile_path, load_annotations=False, load_ocr=False
+    )
+    train_dataset = prepare_hf_dataset(
+        train_docile_dataset,
+        processor,
+        args.overlap_thr,
+        args.arrow_format_path,
+        args.preprocessed_dataset_path,
+    )
 
     config = LayoutLMv3Config.from_pretrained(args.model_name)
 
@@ -1067,12 +1073,6 @@ if __name__ == "__main__":
         trainer.eval_dataset = train_dataset
         metrics = trainer.evaluate()
         trainer.log_metrics("train-eval", metrics)
-
-    if args.save_datasets_in_arrow_format:
-        stored_path_train = args.save_datasets_in_arrow_format / args.split.upper()
-        stored_path_val = args.save_datasets_in_arrow_format / "VAL"
-        print(f"HuggingFace Dataset TRN stored to: {stored_path_train}")
-        print(f"HuggingFace Dataset VAL stored to: {stored_path_val}")
 
     print(f"Tensorboard logs: {os.path.join(args.output_dir, 'runs')}")
     print(f"Best model saved to {best_model_path}")

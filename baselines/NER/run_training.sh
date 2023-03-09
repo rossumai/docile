@@ -26,11 +26,13 @@ NER_SCRIPTS_DIR="/app/baselines/NER"
 CHECKPOINTS_DIR="/app/data/baselines/checkpoints"
 
 # Common parameters for all trainings with exception of roberta_pretraining
-DATA="--dataset_name docile --docile_path /app/data/docile/"
-PREPROCESSED_DATASET_DIR="/app/data/baselines/preprocessed_dataset"
-USE_PREPROCESSED="--load_from_preprocessed ${PREPROCESSED_DATASET_DIR} --store_preprocessed ${PREPROCESSED_DATASET_DIR}"
+DATA="--docile_path /app/data/docile/"
+USE_PREPROCESSED="--preprocessed_dataset_path /app/data/baselines/preprocessed_dataset"
 OTHER_COMMON_PARAMS="--save_total_limit 3 --weight_decay 0.001 --lr 2e-5 --dataloader_num_workers 8 --use_BIO_format --tag_everything --report_all_metrics --stride 0"
 COMMON_PARAMS="${DATA} ${USE_PREPROCESSED} ${OTHER_COMMON_PARAMS}"
+
+# Used for synthetic pretraining of LayoutLMv3
+USE_ARROW="--arrow_format_path /app/data/baselines/preprocessed_dataset_arrow_format"
 
 function run_training() {
   cmd=$1
@@ -129,7 +131,7 @@ fi
 
 single_run="layoutlmv3_ours_synthetic_pretraining"  # 30 epochs on synthetic data only
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  data_params="--split synthetic"
+  data_params="--split synthetic ${USE_ARROW}"
   train_params="--train_bs 16 --test_bs 16 --num_epochs 30 --gradient_accumulation_steps 1 --warmup_ratio 0"
   model="--model_name microsoft/layoutlmv3-base --pretrained_weights ${CHECKPOINTS_DIR}/layoutlmv3_pretraining.ckpt"
   all_params="${COMMON_PARAMS} ${data_params} ${train_params} ${model}"
