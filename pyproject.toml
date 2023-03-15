@@ -45,7 +45,7 @@ sentencepiece = { version = "^0.1.97", optional = true }
 tensorboard = { version = "^2.11.2", optional = true }
 sklearn = { version = "^0.0.post1", optional = true }
 scikit-learn = { version = "^1.2.1", optional = true }
-pytorch-lightning = { version = "^1.8.3", optional = true }
+pytorch-lightning = { extras = ["extra"], version = "^1.8.3", optional = true }
 timm = { version = "^0.6.11", optional = true }
 
 [tool.poetry.extras]
