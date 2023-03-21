@@ -8,7 +8,8 @@ The competition deadline is on May 10, 2023 and comes with a **$9000 prize pool*
 The repository consists of:
 * A python library, `docile`, making it easy to load the dataset, work with its annotations, pdfs and pre-computed OCR and run the evaluation.
 * An interactive [dataset browser notebook](docile/tools/dataset_browser.ipynb) to visualize the document annotations, predictions and evaluation results.
-* Baseline methods (will appear soon).
+* Training and inference scripts for [Baseline methods](baselines/) provided together with pretrained checkpoints and results on test and validation sets.
+* [Tutorials](tutorials/) to get quickly started with the repo.
 
 Table of Contents:
 * [Download the dataset](#download-the-dataset)
@@ -18,8 +19,6 @@ Table of Contents:
 * [Pre-computed OCR](#pre-computed-ocr)
 * [Development instructions](#development-instructions)
 * [Dataset and benchmark paper](#dataset-and-benchmark-paper)
-
-Also check [Tutorials](tutorials/) to get quickly started with the repo and [Baselines](baselines/) for the provided baseline solutions.
 
 ## Download the dataset
 
