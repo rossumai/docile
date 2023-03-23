@@ -1,5 +1,7 @@
 /conda-env/
-/data/
+/data/docile
+/data/open4business
+OPEN_AI_key.txt
 
 .DS_Store
 
