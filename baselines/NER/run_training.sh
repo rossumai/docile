@@ -93,7 +93,7 @@ fi
 
 single_run="roberta_base"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name roberta-base --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -102,7 +102,7 @@ fi
 
 single_run="roberta_ours"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name ${CHECKPOINTS_DIR}/roberta_pretraining_50000 --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -111,7 +111,7 @@ fi
 
 single_run="layoutlmv3_base"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name microsoft/layoutlmv3-base"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -120,7 +120,7 @@ fi
 
 single_run="layoutlmv3_ours"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name microsoft/layoutlmv3-base --pretrained_weights ${CHECKPOINTS_DIR}/layoutlmv3_pretraining.ckpt"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -159,7 +159,7 @@ fi
 
 single_run="roberta_base_with_synthetic_pretraining"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name ${CHECKPOINTS_DIR}/roberta_base_synthetic_pretraining_187500 --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -168,7 +168,7 @@ fi
 
 single_run="roberta_ours_with_synthetic_pretraining"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name ${CHECKPOINTS_DIR}/roberta_ours_synthetic_pretraining_187500 --use_roberta"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -177,7 +177,7 @@ fi
 
 single_run="layoutlmv3_ours_with_synthetic_pretraining"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name microsoft/layoutlmv3-base --pretrained_weights ${CHECKPOINTS_DIR}/layoutlmv3_ours_synthetic_pretraining_187500"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
@@ -188,7 +188,7 @@ fi
 # Not presented in the dataset paper
 single_run="roberta_base_with_2d_embedding"
 if [[ " ${run} " =~ " ${single_run} " ]]; then
-  train_params="--train_bs 16 --test_bs 16 --num_epochs 1000 --gradient_accumulation_steps 1"
+  train_params="--train_bs 16 --test_bs 16 --num_epochs 750 --gradient_accumulation_steps 1"
   model="--model_name roberta-base --use_roberta --use_new_2D_pos_emb --pos_emb_dim 6500"
   all_params="${COMMON_PARAMS} ${train_params} ${model}"
   output_dir="${single_run}/${TIMESTAMP}"
