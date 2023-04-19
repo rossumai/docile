@@ -1,0 +1,28 @@
+# pytorch_lightning==1.8.0.post1
+trainer:
+  default_root_dir: /app/data/baselines/line_item_detection/table_transformer/
+  gradient_clip_val: 0.1
+  max_epochs: 1000
+  log_every_n_steps: 20
+  accelerator: gpu
+  devices: 1
+  precision: 16
+  callbacks:
+    - class_path: "pytorch_lightning.callbacks.LearningRateMonitor"
+      init_args:
+        logging_interval: step
+    - class_path: "pytorch_lightning.callbacks.ModelCheckpoint"
+      init_args:
+        save_top_k: 1
+        save_last: true
+        monitor: val_loss
+        every_n_epochs: 1
+model:
+  lr: 3.0e-05
+  lr_backbone: 3.0e-07
+  weight_decay: 0.0001
+  threshold: 0.5
+  batch_size: 32
+  train_dataset_name: train
+  val_dataset_name: val
+ckpt_path: null

@@ -62,54 +62,43 @@ def tag_fields_with_entities(fields, unique_entities=[]):  # noqa: B006
 
     prev_lid = None
 
-    for token in fields:
+    for token, next_token in zip(fields, fields[1:] + [None]):
         fts = token.fieldtype if isinstance(token.fieldtype, list) else None
         lid = token.line_item_id
+        next_lid = None if next_token is None else next_token.line_item_id
 
         other = (token.bbox.to_tuple(),)
+        labels = []
 
-        if not fts and lid is None:  # 0 0
-            # complete O class
-            tokens_with_entities.append((token.text, ["O-KILE", "O-LIR", "O-LI"], other))
-        elif not fts and lid:  # 0 1
-            # can be just B-LI, I-LI, or E-LI
-            li_label = "B-LI" if prev_lid is None or prev_lid != lid else "I-LI"
-            tokens_with_entities.append((token.text, ["O-KILE", "O-LIR", li_label], other))
-        elif fts and lid is None:  # 1 0
-            # add all classes from fts
-            label = []
+        if fts:
             for ft in fts:
                 if entity_map[ft]:
-                    label.append(f"I-{ft}")
+                    labels.append(f"I-{ft}")
                 else:
-                    label.append(f"B-{ft}")
+                    labels.append(f"B-{ft}")
                     entity_map[ft] = True
-            label.append("O-LI")
-            tokens_with_entities.append((token.text, label, other))
-        else:  # 1 1
-            li_label = "B-LI" if prev_lid is None or prev_lid != lid else "I-LI"
-            # add all classes from fts
-            label = []
-            for ft in fts:
-                if entity_map[ft]:
-                    label.append(f"I-{ft}")
-                else:
-                    label.append(f"B-{ft}")
-                    entity_map[ft] = True
-            label.append(li_label)
-            tokens_with_entities.append((token.text, label, other))
+        else:
+            labels.extend(["O-KILE", "O-LIR"])
+
+        if lid is not None:
+            li_labels = []
+            if prev_lid is None or prev_lid != lid:
+                li_labels.append("B-LI")
+            if next_lid is None or next_lid != lid:
+                li_labels.append("E-LI")
+            if li_labels == []:
+                li_labels.append("I-LI")
+            labels.extend(li_labels)
+        else:
+            labels.append("O-LI")
+
+        tokens_with_entities.append((token.text, labels, other))
 
         # reset line_item labels in entity_map if there is a transition to a different line_item
         if prev_lid != lid:
             for k in entity_map.keys():
                 if k.startswith("line_item_"):
                     entity_map[k] = False
-
-        # possibly correct last but one entry (because it should have [x, E-LI] instead of [x, I-LI], unless it is O-LI)
-        if prev_lid != lid:
-            if len(tokens_with_entities) > 1:
-                if tokens_with_entities[-2][1][-1][0] != "O":
-                    tokens_with_entities[-2][1][-1] = "E-LI"
 
         prev_lid = lid
 
@@ -504,47 +493,41 @@ def get_data_from_docile(dataset, overlap_thr=0.5):
 
             tables_ocr = []
             if tables_bbox:
-                for field in sorted_fields:
+                for i, field in enumerate(sorted_fields):
                     if tables_bbox.intersection(field.bbox).area / field.bbox.area >= overlap_thr:
-                        tables_ocr.append(field)
+                        tables_ocr.append((i, field))
 
             # # 2. Split into individual lines, group by line item id
             # for table_i, table_fields in enumerate(tables_ocr):
             text_lines = {}
             # for field in page_fields:
-            for field in tables_ocr:
+            for i_field, field in tables_ocr:
                 gid = field.groups[0][4:]
                 if gid not in text_lines:
-                    text_lines[gid] = [field]
+                    text_lines[gid] = [(i_field, field)]
                 else:
-                    text_lines[gid].append(field)
+                    text_lines[gid].append((i_field, field))
             # now there should be only 1 line_item_id (or first 04d in groups) per each text_lines
             # we need to merge text_lines, if there are several of them assigned to the same line_item_id
             line_items = {}
             # prev_id = 0 + 1000*table_i
             prev_id = 0 + 1000 * page
             for _, fields in text_lines.items():
-                line_item_ids = [x.line_item_id for x in fields if x.line_item_id is not None]
+                line_item_ids = [f.line_item_id for _i, f in fields if f.line_item_id is not None]
                 prev_id = line_item_ids[0] if line_item_ids else prev_id
                 if prev_id not in line_items:
                     line_items[prev_id] = fields
                 else:
                     line_items[prev_id].extend(fields)
             # 3. Append to data, which will be then used to construct NER Dataset
-            new_line_items = {}
             for lid, fields in line_items.items():
                 if lid > 0:
-                    new_fields = []
-                    for field in fields:
+                    for i_field, field in fields:
                         gid = field.groups[0]
                         new_field = dataclasses.replace(
                             field, line_item_id=lid, groups=[f"{lid:04d}{gid[4:]}"]
                         )
-                        new_fields.append(new_field)
-                    new_line_items[lid] = new_fields
-                else:
-                    new_line_items[lid] = fields
-            line_items = new_line_items
+                        sorted_fields[i_field] = new_field
 
             # append data and metadata
             metadata.append(

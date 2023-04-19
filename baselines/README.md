@@ -30,8 +30,8 @@ We provide code to reproduce all results that can be found in the [paper](../REA
 
 The code is structured into three subfolders:
 * [NER](NER/) contains most of the baselines code, including training code for RoBERTa, LayoutLMv3 and RoBERTa pretraining, and the inference code.
-* [layoutlmv3_pretraing](layoutlmv3_pretrain/) [coming soon] contains code for LayoutLMv3 pretraining
-* [table-transformer](table-transformer/) [coming soon] contains code for DETR used for table and Line Item detection.
+* [layoutlmv3_pretraing](layoutlmv3_pretrain/) contains code for LayoutLMv3 pretraining.
+* [table-transformer](table-transformer/) contains code for DETR used for table and Line Item detection.
 
 ## Results of the provided baselines
 
