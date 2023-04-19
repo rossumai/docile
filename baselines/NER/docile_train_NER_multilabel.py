@@ -460,47 +460,41 @@ def get_data_from_docile(dataset, overlap_thr=0.5):
 
             tables_ocr = []
             if tables_bbox:
-                for field in sorted_fields:
+                for i, field in enumerate(sorted_fields):
                     if tables_bbox.intersection(field.bbox).area / field.bbox.area >= overlap_thr:
-                        tables_ocr.append(field)
+                        tables_ocr.append((i, field))
 
             # # 2. Split into individual lines, group by line item id
             # for table_i, table_fields in enumerate(tables_ocr):
             text_lines = {}
             # for field in page_fields:
-            for field in tables_ocr:
+            for i_field, field in tables_ocr:
                 gid = field.groups[0][4:]
                 if gid not in text_lines:
-                    text_lines[gid] = [field]
+                    text_lines[gid] = [(i_field, field)]
                 else:
-                    text_lines[gid].append(field)
+                    text_lines[gid].append((i_field, field))
             # now there should be only 1 line_item_id (or first 04d in groups) per each text_lines
             # we need to merge text_lines, if there are several of them assigned to the same line_item_id
             line_items = {}
             # prev_id = 0 + 1000*table_i
             prev_id = 0 + 1000 * page
             for _, fields in text_lines.items():
-                line_item_ids = [x.line_item_id for x in fields if x.line_item_id is not None]
+                line_item_ids = [f.line_item_id for _i, f in fields if f.line_item_id is not None]
                 prev_id = line_item_ids[0] if line_item_ids else prev_id
                 if prev_id not in line_items:
                     line_items[prev_id] = fields
                 else:
                     line_items[prev_id].extend(fields)
             # 3. Append to data, which will be then used to construct NER Dataset
-            new_line_items = {}
             for lid, fields in line_items.items():
                 if lid > 0:
-                    new_fields = []
-                    for field in fields:
+                    for i_field, field in fields:
                         gid = field.groups[0]
                         new_field = dataclasses.replace(
                             field, line_item_id=lid, groups=[f"{lid:04d}{gid[4:]}"]
                         )
-                        new_fields.append(new_field)
-                    new_line_items[lid] = new_fields
-                else:
-                    new_line_items[lid] = fields
-            line_items = new_line_items
+                        sorted_fields[i_field] = new_field
 
             # append data and metadata
             metadata.append(
