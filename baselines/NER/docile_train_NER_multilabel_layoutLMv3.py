@@ -62,54 +62,43 @@ def tag_fields_with_entities(fields, unique_entities=[]):  # noqa: B006
 
     prev_lid = None
 
-    for token in fields:
+    for token, next_token in zip(fields, fields[1:] + [None]):
         fts = token.fieldtype if isinstance(token.fieldtype, list) else None
         lid = token.line_item_id
+        next_lid = None if next_token is None else next_token.line_item_id
 
         other = (token.bbox.to_tuple(),)
+        labels = []
 
-        if not fts and lid is None:  # 0 0
-            # complete O class
-            tokens_with_entities.append((token.text, ["O-KILE", "O-LIR", "O-LI"], other))
-        elif not fts and lid:  # 0 1
-            # can be just B-LI, I-LI, or E-LI
-            li_label = "B-LI" if prev_lid is None or prev_lid != lid else "I-LI"
-            tokens_with_entities.append((token.text, ["O-KILE", "O-LIR", li_label], other))
-        elif fts and lid is None:  # 1 0
-            # add all classes from fts
-            label = []
+        if fts:
             for ft in fts:
                 if entity_map[ft]:
-                    label.append(f"I-{ft}")
+                    labels.append(f"I-{ft}")
                 else:
-                    label.append(f"B-{ft}")
+                    labels.append(f"B-{ft}")
                     entity_map[ft] = True
-            label.append("O-LI")
-            tokens_with_entities.append((token.text, label, other))
-        else:  # 1 1
-            li_label = "B-LI" if prev_lid is None or prev_lid != lid else "I-LI"
-            # add all classes from fts
-            label = []
-            for ft in fts:
-                if entity_map[ft]:
-                    label.append(f"I-{ft}")
-                else:
-                    label.append(f"B-{ft}")
-                    entity_map[ft] = True
-            label.append(li_label)
-            tokens_with_entities.append((token.text, label, other))
+        else:
+            labels.extend(["O-KILE", "O-LIR"])
+
+        if lid is not None:
+            li_labels = []
+            if prev_lid is None or prev_lid != lid:
+                li_labels.append("B-LI")
+            if next_lid is None or next_lid != lid:
+                li_labels.append("E-LI")
+            if li_labels == []:
+                li_labels.append("I-LI")
+            labels.extend(li_labels)
+        else:
+            labels.append("O-LI")
+
+        tokens_with_entities.append((token.text, labels, other))
 
         # reset line_item labels in entity_map if there is a transition to a different line_item
         if prev_lid != lid:
             for k in entity_map.keys():
                 if k.startswith("line_item_"):
                     entity_map[k] = False
-
-        # possibly correct last but one entry (because it should have [x, E-LI] instead of [x, I-LI], unless it is O-LI)
-        if prev_lid != lid:
-            if len(tokens_with_entities) > 1:
-                if tokens_with_entities[-2][1][-1][0] != "O":
-                    tokens_with_entities[-2][1][-1] = "E-LI"
 
         prev_lid = lid
 
