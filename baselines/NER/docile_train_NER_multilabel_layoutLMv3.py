@@ -842,12 +842,24 @@ if __name__ == "__main__":
         default=1,
         help="",
     )
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
 
     print(f"{datetime.now()} Started.")
 
     show_summary(args, __file__)
 
+    output_dir_exists = os.path.exists(args.output_dir) and os.listdir(args.output_dir) != [
+        "log_train.txt"
+    ]
+    if output_dir_exists and not args.resume:
+        raise ValueError(
+            f"Output dir {args.output_dir} already exists, delete it or use --resume."
+        )
+    if not output_dir_exists and args.resume:
+        raise ValueError(
+            f"--resume was used but output dir {args.output_dir} is empty (apart from log file)"
+        )
     os.makedirs(args.output_dir, exist_ok=True)
 
     # Check GPU availability
@@ -954,6 +966,7 @@ if __name__ == "__main__":
         warmup_ratio=args.warmup_ratio,
         dataloader_num_workers=args.dataloader_num_workers,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
+        resume_from_checkpoint=args.resume,
     )
 
     print(f"INFO: tensorboard stored in {os.path.join(args.output_dir, 'runs')}")
@@ -1037,7 +1050,7 @@ if __name__ == "__main__":
         compute_metrics=compute_metrics,
     )
 
-    train_result = trainer.train()
+    train_result = trainer.train(resume_from_checkpoint=args.resume)
     metrics = train_result.metrics
 
     # save the trained model
