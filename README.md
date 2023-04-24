@@ -25,6 +25,7 @@ Table of Contents:
 First you need to obtain a secret token by following the instructions at https://docile.rossum.ai/. Then download and unzip the dataset by running:
 ```bash
 ./download_dataset.sh TOKEN annotated-trainval data/docile --unzip
+./download_dataset.sh TOKEN test data/docile --unzip
 ./download_dataset.sh TOKEN synthetic data/docile --unzip
 ./download_dataset.sh TOKEN unlabeled data/docile --unzip
 ```
