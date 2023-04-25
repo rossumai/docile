@@ -283,7 +283,10 @@ class DatasetBrowser:
 
         display_boxes = []
 
-        table_grid = annotation.get_table_grid(self.page_i)
+        try:
+            table_grid = annotation.get_table_grid(self.page_i)
+        except KeyError:
+            table_grid = None
         if table_grid is not None:
             display_boxes.append(
                 DisplayBox(table_grid.bbox, "[Table area]", DisplayType.TABLE_AREA)
@@ -336,9 +339,13 @@ class DatasetBrowser:
                     ]
                 )
         else:
-            fields_types.extend(
-                [(f, DisplayType.ANNOTATION) for f in annotation.page_fields(self.page_i)]
-            )
+            try:
+                fields_types.extend(
+                    [(f, DisplayType.ANNOTATION) for f in annotation.page_fields(self.page_i)]
+                )
+            except KeyError:
+                # annotations not available, this can happen for test set or unlabeled set
+                pass
             if self.kile_predictions is not None:
                 fields_types.extend(
                     [
@@ -383,9 +390,13 @@ class DatasetBrowser:
                     ]
                 )
         else:
-            fields_types.extend(
-                [(f, DisplayType.ANNOTATION) for f in annotation.page_li_fields(self.page_i)]
-            )
+            try:
+                fields_types.extend(
+                    [(f, DisplayType.ANNOTATION) for f in annotation.page_li_fields(self.page_i)]
+                )
+            except KeyError:
+                # annotations not available, this can happen for test set or unlabeled set
+                pass
             if self.lir_predictions is not None:
                 fields_types.extend(
                     [

@@ -407,8 +407,6 @@ if __name__ == "__main__":
 
     for document in tqdm(dataset):
         doc_id = document.docid
-        gt_kile_fields = document.annotation.fields
-        gt_li_fields = document.annotation.li_fields
         pred_kile_fields = []
         pred_kile_fields_final = []
         pred_li_fields = []
@@ -417,18 +415,8 @@ if __name__ == "__main__":
         intermediate_fields = []
         li_id = -1
         for page in range(document.page_count):
-            gt_kile_fields_page = [field for field in gt_kile_fields if field.page == page]
-            gt_li_fields_page = [field for field in gt_li_fields if field.page == page]
             img = document.page_image(page)
             W, H = img.size
-            gt_kile_fields_page = [
-                dataclasses.replace(field, bbox=field.bbox.to_absolute_coords(W, H))
-                for field in gt_kile_fields_page
-            ]
-            gt_li_fields_page = [
-                dataclasses.replace(field, bbox=field.bbox.to_absolute_coords(W, H))
-                for field in gt_li_fields_page
-            ]
             ocr = document.ocr.get_all_words(page, snapped=True)
             ocr = [
                 dataclasses.replace(ocr_field, bbox=ocr_field.bbox.to_absolute_coords(W, H))
