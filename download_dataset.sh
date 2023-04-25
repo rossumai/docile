@@ -105,16 +105,16 @@ if [[ "$dataset" == "unlabeled" ]]; then
       download_and_unzip "$token" "$targetdir" "$unzip" "unlabeled-chunk-$i"
     fi
   done
-elif [[ "$dataset" == "baselines" ]]; then
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-base"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-ours"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-ours"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-pretraining"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-pretraining"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-detr"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-base-with-synthetic-pretraining"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-roberta-ours-with-synthetic-pretraining"
-  download_and_unzip "$token" "$targetdir" "$unzip" "baselines-layoutlmv3-ours-with-synthetic-pretraining"
+elif [[ "$dataset" == "baselines" || "$dataset" == "baselines-20230315" ]]; then
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-roberta-base"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-roberta-ours"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-layoutlmv3-ours"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-roberta-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-layoutlmv3-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-detr"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-roberta-base-with-synthetic-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-roberta-ours-with-synthetic-pretraining"
+  download_and_unzip "$token" "$targetdir" "$unzip" "${dataset}-layoutlmv3-ours-with-synthetic-pretraining"
 else
   download_and_unzip "$token" "$targetdir" "$unzip" "$dataset"
 fi
