@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Repository to work with the [DocILE dataset and benchmark](https://docile.rossum.ai/), used in the DocILE'23 CLEF Lab and ICDAR Competition.
-The competition deadline is on May 10, 2023 and comes with a **$9000 prize pool**.
+The competition deadline is on ~~May 10~~ **May 24, 2023** and comes with a **$9000 prize pool**.
 
 The repository consists of:
 * A python library, `docile`, making it easy to load the dataset, work with its annotations, pdfs and pre-computed OCR and run the evaluation.
