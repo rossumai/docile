@@ -30,7 +30,7 @@ The baselines available for download are below and contain the PyTorch checkpoin
 
 ## Code to run trainings and inference
 
-We provide code to reproduce all results that can be found in the [paper](../README.md#dataset-and-benchmark-paper). Some small errors were found and fixed in the training and inference scripts that influence the numbers presented in the paper v1 version. These should be fixed in an updated version that we aim to make available on arXiv in April 2023. You can see the updated comparison of the provided baselines in the following section.
+We provide code to reproduce all results that can be found in the [paper](../README.md#dataset-and-benchmark-paper).
 
 The code is structured into three subfolders:
 * [NER](NER/) contains most of the baselines code, including training code for RoBERTa, LayoutLMv3 and RoBERTa pretraining, and the inference code.
