@@ -18,7 +18,7 @@ Table of Contents:
 * [Tasks and evaluation metrics](#tasks-and-evaluation-metrics)
 * [Pre-computed OCR](#pre-computed-ocr)
 * [Development instructions](#development-instructions)
-* [Dataset and benchmark paper](#dataset-and-benchmark-paper)
+* [Dataset and benchmark paper and Supplementary Material](#dataset-and-benchmark-paper-and-supplementary-material)
 
 ## Download the dataset
 
@@ -165,8 +165,8 @@ Install pre-commit with `pre-commit install` (don't forget you need to prepend a
 
 Run tests by calling `pytest tests`.
 
-## Dataset and benchmark paper
-The dataset, the benchmark tasks and the evaluation criteria are described in detail in the [dataset paper](https://arxiv.org/abs/2302.05658). To cite the dataset, please use the following BibTeX entry:
+## Dataset and benchmark paper and Supplementary Material
+The dataset, the benchmark tasks and the evaluation criteria are described in detail in the [dataset paper](https://arxiv.org/abs/2302.05658) which was accepted to ICDAR 2023. The provided link is to arXiv version that includes Supplementary Material. To cite the dataset, please use the following BibTeX entry:
 ```
 @misc{simsa2023docile,
     title={{DocILE} Benchmark for Document Information Localization and Extraction},
