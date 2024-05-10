@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install Python 3.8
+      - name: Install Python 3.9
         uses: actions/setup-python@v4
         with:
-          python-version: '3.8'
+          python-version: "3.9"
 
       - name: Pre-Commit
         uses: pre-commit/action@v3.0.0
@@ -25,7 +25,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v3
