@@ -12,6 +12,37 @@ files = [
 ]
 
 [[package]]
+name = "accelerate"
+version = "0.30.1"
+description = "Accelerate"
+optional = true
+python-versions = ">=3.8.0"
+files = [
+    {file = "accelerate-0.30.1-py3-none-any.whl", hash = "sha256:8dd4edd532a4dac72558c5fe6fe8cb70d0c8ec9e8733f48db97d51ee41cbe763"},
+    {file = "accelerate-0.30.1.tar.gz", hash = "sha256:96779c618889646b86dc928c9e55e86e50a7ccab59e1692e22096481977ae682"},
+]
+
+[package.dependencies]
+huggingface-hub = "*"
+numpy = ">=1.17"
+packaging = ">=20.0"
+psutil = "*"
+pyyaml = "*"
+safetensors = ">=0.3.1"
+torch = ">=1.10.0"
+
+[package.extras]
+deepspeed = ["deepspeed (<=0.14.0)"]
+dev = ["bitsandbytes", "black (>=23.1,<24.0)", "datasets", "diffusers", "evaluate", "hf-doc-builder (>=0.3.0)", "parameterized", "pytest (>=7.2.0,<=8.0.0)", "pytest-subtests", "pytest-xdist", "rich", "ruff (>=0.2.1,<0.3.0)", "scikit-learn", "scipy", "timm", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
+quality = ["black (>=23.1,<24.0)", "hf-doc-builder (>=0.3.0)", "ruff (>=0.2.1,<0.3.0)"]
+rich = ["rich"]
+sagemaker = ["sagemaker"]
+test-dev = ["bitsandbytes", "datasets", "diffusers", "evaluate", "scikit-learn", "scipy", "timm", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
+test-prod = ["parameterized", "pytest (>=7.2.0,<=8.0.0)", "pytest-subtests", "pytest-xdist"]
+test-trackers = ["comet-ml", "dvclive", "tensorboard", "wandb"]
+testing = ["bitsandbytes", "datasets", "diffusers", "evaluate", "parameterized", "pytest (>=7.2.0,<=8.0.0)", "pytest-subtests", "pytest-xdist", "scikit-learn", "scipy", "timm", "torchpippy (>=0.2.0)", "tqdm", "transformers"]
+
+[[package]]
 name = "aiobotocore"
 version = "2.12.3"
 description = "Async client for aws services using botocore and aiohttp"
@@ -5261,6 +5292,7 @@ files = [
 ]
 
 [package.dependencies]
+accelerate = {version = ">=0.21.0", optional = true, markers = "extra == \"torch\""}
 filelock = "*"
 huggingface-hub = ">=0.19.3,<1.0"
 numpy = ">=1.17"
@@ -5270,6 +5302,7 @@ regex = "!=2019.12.17"
 requests = "*"
 safetensors = ">=0.4.1"
 tokenizers = ">=0.19,<0.20"
+torch = {version = "*", optional = true, markers = "extra == \"torch\""}
 tqdm = ">=4.27"
 
 [package.extras]
@@ -6069,4 +6102,4 @@ ocr = ["opencv-python", "python-doctr", "torch", "torchvision"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "171b0592beb0d9a1adf7b5be6fffb99d270dbc4027cb22873863def2865c547d"
+content-hash = "ffc0e34a1ef70194be39c790107898e2cf58b2eea0e90f43c14528ea6b52288c"
