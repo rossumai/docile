@@ -37,7 +37,7 @@ torch = { version = ">=1.13.1", optional = true }
 torchvision = { version = ">=0.14.1", optional = true }
 opencv-python = { version = "^4.6.0.66", optional = true }
 # baselines
-transformers = { version = ">=4.26.1", optional = true }
+transformers = { version = ">=4.26.1", extras = ["torch"], optional = true }
 # pin datasets version to avoid https://github.com/apache/arrow/issues/34455
 datasets = { version = "^2.8.0,<2.10.0", extras = ["s3"], optional = true }
 torchmetrics = { version = "^0.11.0", optional = true }
