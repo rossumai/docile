@@ -11,6 +11,7 @@ from io import BytesIO
 from pathlib import Path
 
 import numpy as np
+import pyarrow
 import torch
 import torchmetrics
 from data_collator import MyLayoutLMv3MLDataCollatorForTokenClassification
@@ -687,6 +688,9 @@ def prepare_hf_dataset(
 
 
 if __name__ == "__main__":
+    # https://github.com/huggingface/datasets/issues/6396#issuecomment-1806955672
+    pyarrow.PyExtensionType.set_auto_load(True)
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--docile_path",
