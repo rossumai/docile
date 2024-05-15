@@ -47,8 +47,8 @@ scikit-learn = { version = "^1.2.1", optional = true }
 pytorch-lightning = { extras = ["extra"], version = "^1.8.3", optional = true }
 timm = { version = "^0.6.11", optional = true }
 # pin botocore otherwise poetry lock never finishes
-botocore = { version = "~1.34.69", optional = true }
-aiobotocore = { version = "~2.12.3" , optional = true}
+botocore = { version = "^1.34.69", optional = true }
+aiobotocore = { version = "^2.12.3" , optional = true }
 
 [tool.poetry.extras]
 interactive = ["jupyterlab", "ipywidgets", "plotly"]
@@ -64,6 +64,8 @@ baselines = [
     "scikit-learn",
     "pytorch-lightning",
     "timm",
+    "botocore",
+    "aiobotocore",
 ]
 
 [tool.poetry.group.dev.dependencies]
