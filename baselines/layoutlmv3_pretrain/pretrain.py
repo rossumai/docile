@@ -11,7 +11,6 @@ import pytorch_lightning as pl
 import torch
 from lr_scheduler import LinearWarmupCosineAnnealingLR
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
-from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torch import Tensor
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -279,7 +278,6 @@ class DocDataModule(pl.LightningDataModule):
                 transforms.RandomResizedCrop(self.img_size, scale=self.img_scale),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
             ]
         )
         self.val_transforms = transforms.Compose(
@@ -287,7 +285,6 @@ class DocDataModule(pl.LightningDataModule):
                 transforms.RandomResizedCrop(self.img_size, scale=self.img_scale),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
             ]
         )
         self.train_dataset = DataLoaderWrapper(
@@ -515,7 +512,7 @@ class DataLoaderWrapper:
             g = np.array(
                 list(map(lambda y: np.abs(ft.bbox.to_tuple()[1] - y), clusters.values()))
             ).argmin()
-            ft.groups = [g]
+            ft.groups = [int(g)]
         return line_item, clusters
 
     def get_sorted_field_candidates(self, original_fields):
@@ -601,8 +598,7 @@ def main():
         log_every_n_steps=1,
         default_root_dir=ckpt_dir,
         gradient_clip_val=gradient_norm_clip_val,
-        resume_from_checkpoint=resume_from_checkpoint,
-        strategy="ddp",
+        strategy=pl.strategies.DDPStrategy(find_unused_parameters=True),
     )
 
     datamodule = DocDataModule(
@@ -630,7 +626,7 @@ def main():
         ckpt_dir=ckpt_dir,
     )
 
-    f_trainer.fit(model=model, datamodule=datamodule)
+    f_trainer.fit(model=model, datamodule=datamodule, ckpt_path=resume_from_checkpoint)
 
 
 if __name__ == "__main__":

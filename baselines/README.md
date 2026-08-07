@@ -8,6 +8,8 @@ The DocILE benchmark comes with several baselines to help you get started and to
 
 **Warning:** Furthermore a [bug was fixed](https://github.com/rossumai/docile/pull/64) on April 24, 2023 in the NER baselines training code (inference and pretraining were not affected). This bug did not affect any of the shared baselines as it was introduced during refactorings after trainings of the originally shared checkpoints have already finished and before the new trainings have started.
 
+**Warning:** After the major dependency upgrades (transformers, pytorch-lightning, torch, numpy), re-running the trainings might not exactly reproduce the published checkpoints and results. In particular, the LayoutLMv3 pretraining (`layoutlmv3_pretrain/pretrain.py`) previously applied an extra ImageNet `transforms.Normalize` on top of the processor's own image normalization; modern versions of transformers reject such inputs (float images with values outside `[0, 1]`), so this extra normalization was removed and the image preprocessing now slightly differs from the one used to produce the published `layoutlmv3-pretraining` checkpoint. The published checkpoints remain the reference for the benchmark results below.
+
 Checkpoints of various trained models are provided with predictions on the validation set. You can download them with the same [download script](../download_dataset.sh) that is provided for downloading the dataset in the root of this repository.
 
 First you need to obtain a secret token by following the instructions at https://docile.rossum.ai/. Then run this from the root of this repository:

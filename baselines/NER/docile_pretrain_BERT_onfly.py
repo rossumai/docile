@@ -161,7 +161,7 @@ def split_fields_by_text_lines(line_item):
             # list(map(lambda y: (ft.bbox.centroid[1] - y) ** 2, clusters.values()))
             list(map(lambda y: np.abs(ft.bbox.to_tuple()[1] - y), clusters.values()))
         ).argmin()
-        updated_ft = dataclasses.replace(ft, groups=[g])
+        updated_ft = dataclasses.replace(ft, groups=[int(g)])
         new_line_item.append(updated_ft)
     return new_line_item, clusters
 
@@ -300,7 +300,7 @@ def run_mlm():
         model=model,
         args=training_args,
         train_dataset=train_dataset,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         data_collator=data_collator,
     )
     # train the model

@@ -43,7 +43,7 @@ function run_inference() {
   log="${output_dir}/log_inference.txt"
 
   run_cmd=$(tr '\n' ' ' << EOF
-CUDA_VISIBLE_DEVICES=${GPU} python ${cmd}
+CUDA_VISIBLE_DEVICES=${GPU} uv run python ${cmd}
     --split ${split}
     --docile_path ${DOCILE_PATH}
     --checkpoint "${MODELS_DIR_PREFIX}/${checkpoint_subdir}"
