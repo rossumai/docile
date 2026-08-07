@@ -3,6 +3,7 @@
 <p align="center">
   <a href="https://github.com/rossumai/docile/actions/workflows/tests.yml"><img src="https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
   <a href="https://pypi.org/project/docile-benchmark/"><img src="https://img.shields.io/pypi/v/docile-benchmark" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/docile-benchmark/"><img src="https://img.shields.io/pypi/pyversions/docile-benchmark" alt="Supported Python versions"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
