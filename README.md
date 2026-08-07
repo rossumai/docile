@@ -38,7 +38,11 @@ You can also work with the zipped datasets when you turn off image caching (chec
 
 ## Installation
 
-### Option 1: Install as a library
+Choose one of the two options below: install `docile` as a library, or use docker.
+
+<details>
+<summary><b>Option 1: Install as a library</b></summary>
+
 Install the library with:
 ```shell
 uv pip install docile-benchmark
@@ -62,7 +66,11 @@ uv pip install "docile-benchmark[ocr]"
 
 The first line installs additional dependencies allowing you to use the interactive dataset browser in [docile/tools/dataset_browser.py](docile/tools/dataset_browser.py) and the [tutorials](tutorials/). The second line let's you rerun the OCR predictions from scratch (e.g., if you'd like to run it with different parameters) but to make it work, you might need additional dependencies on your system. Check https://github.com/mindee/doctr for the installation instructions (for pytorch).
 
-### Option 2: Use docker
+</details>
+
+<details>
+<summary><b>Option 2: Use docker</b></summary>
+
 There are two Dockerfiles available with the dependencies preinstalled:
 
 * `Dockerfile` is a lighter, CPU-only, version with all necessary dependencies to use the dataset with the pre-computed OCR and interactive browser.
@@ -82,6 +90,8 @@ Jupyter lab can be then accessed at `https://127.0.0.1:${JUPYTER_PORT}` (retriev
 docker compose exec jupyter bash
 ```
 After that the `docile` library and its dependencies are already installed in the environment; prefix commands with `uv run ...` (e.g. `uv run jupyter lab`) to run them inside it.
+
+</details>
 
 ## Predictions format and running evaluation
 
