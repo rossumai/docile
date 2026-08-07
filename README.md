@@ -1,6 +1,9 @@
 # DocILE: Document Information Localization and Extraction Benchmark
-[![Tests](https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/rossumai/docile/actions/workflows/tests.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+<p align="center">
+  <a href="https://github.com/rossumai/docile/actions/workflows/tests.yml"><img src="https://github.com/rossumai/docile/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
 
 Repository to work with the [DocILE dataset and benchmark](https://docile.rossum.ai/), used in the DocILE'23 CLEF Lab and ICDAR Competition.
 The competition deadline is on ~~May 10~~ **May 24, 2023** and comes with a **$9000 prize pool**.
