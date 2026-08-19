@@ -901,7 +901,7 @@ requires-dist = [
     { name = "aiobotocore", marker = "extra == 'baselines'", specifier = ">=2.23,<3" },
     { name = "botocore", marker = "extra == 'baselines'", specifier = ">=1.38,<2" },
     { name = "click", specifier = ">=8.2,<9" },
-    { name = "datasets", extras = ["s3"], marker = "extra == 'baselines'", specifier = ">=4,<5" },
+    { name = "datasets", marker = "extra == 'baselines'", specifier = ">=4,<5" },
     { name = "dill", marker = "extra == 'baselines'", specifier = ">=0.4.1" },
     { name = "ipywidgets", marker = "extra == 'interactive'", specifier = ">=8.0.4,<9" },
     { name = "jupyterlab", marker = "extra == 'interactive'", specifier = ">=4.0,<5" },
